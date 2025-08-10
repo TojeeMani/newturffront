@@ -1,0 +1,9 @@
+<svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#22c55e"/>
+  <rect x="50" y="50" width="300" height="200" rx="10" fill="#16a34a" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="200" cy="150" r="30" fill="none" stroke="#ffffff" stroke-width="2"/>
+  <line x1="200" y1="50" x2="200" y2="250" stroke="#ffffff" stroke-width="2"/>
+  <rect x="50" y="120" width="40" height="60" fill="none" stroke="#ffffff" stroke-width="2"/>
+  <rect x="310" y="120" width="40" height="60" fill="none" stroke="#ffffff" stroke-width="2"/>
+  <text x="200" y="280" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#ffffff">Football Field</text>
+</svg>
