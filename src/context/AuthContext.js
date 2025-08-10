@@ -104,21 +104,51 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user is authenticated on app load
   useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        const token = localStorage.getItem('token');
+
+        if (token) {
+          // If we have a token, try to get user info
+          try {
+            const response = await apiService.getMe();
+            if (response.success) {
+              dispatch({
+                type: AUTH_ACTIONS.LOGIN_SUCCESS,
+                payload: {
+                  user: response.user,
+                  token: token
+                }
+              });
+              return;
+            }
+          } catch (error) {
+            console.log('Token validation failed, clearing token');
+            localStorage.removeItem('token');
+          }
+        }
+
+        // No valid token, set loading to false
+        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+      } catch (error) {
+        console.error('Auth initialization failed:', error);
+        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+      }
+    };
+
+    // Initialize auth immediately
+    initializeAuth();
+
+    // Set up Firebase auth state listener (but don't block initial load)
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
+      // Only handle Firebase auth changes if we don't already have a valid session
+      if (firebaseUser && !state.isAuthenticated) {
         try {
-          dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
-          
-          // Get the ID token
           const firebaseToken = await firebaseUser.getIdToken();
-          
-          // Send token to backend for verification
           const response = await apiService.firebaseAuth(firebaseToken);
-          
+
           if (response.success) {
-            // Store the JWT token from backend
             localStorage.setItem('token', response.token);
-            
             dispatch({
               type: AUTH_ACTIONS.LOGIN_SUCCESS,
               payload: {
@@ -126,19 +156,10 @@ export const AuthProvider = ({ children }) => {
                 token: response.token
               }
             });
-          } else {
-            // If backend verification fails, logout
-            localStorage.removeItem('token');
-            dispatch({ type: AUTH_ACTIONS.LOGOUT });
           }
         } catch (error) {
-          console.error('Auth check failed:', error);
-          localStorage.removeItem('token');
-          dispatch({ type: AUTH_ACTIONS.LOGOUT });
+          console.error('Firebase auth check failed:', error);
         }
-      } else {
-        localStorage.removeItem('token');
-        dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
       }
     });
 

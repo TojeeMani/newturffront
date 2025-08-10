@@ -100,6 +100,10 @@ class ApiService {
     return this.request('/auth/me');
   }
 
+  async getMe() {
+    return this.request('/auth/me');
+  }
+
   async updateProfile(profileData) {
     return this.request('/auth/profile', {
       method: 'PUT',
@@ -241,24 +245,45 @@ class ApiService {
     });
   }
 
-  // Upload a single file to Cloudinary
+  // Upload profile image via backend
+  async uploadProfileImage(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${this.baseURL}/upload/profile`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Profile image upload failed');
+    }
+
+    return await response.json();
+  }
+
+  // Upload a single file to Cloudinary (direct upload)
   async uploadDocumentToCloudinary(file) {
     const formData = new FormData();
     const uploadPreset = process.env.REACT_APP_CLOUDINARY_PRESET || 'turfease';
     const cloudName = process.env.REACT_APP_CLOUDINARY_CLOUD || 'dlegjx9sw';
-  
+
     console.log('🧪 Uploading to Cloudinary with:', { uploadPreset, cloudName });
-  
+
     formData.append('file', file);
     formData.append('upload_preset', uploadPreset);
-  
+
     const url = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
-  
+
     const response = await fetch(url, {
       method: 'POST',
       body: formData
     });
-  
+
     if (!response.ok) {
       const error = await response.text(); // Show raw error
       console.error('🚨 Cloudinary upload error:', error);

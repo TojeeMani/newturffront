@@ -104,8 +104,10 @@ class TurfService {
   // Upload turf images
   async uploadImages(files) {
     try {
+      console.log('🔍 TurfService.uploadImages called with:', files);
       const formData = new FormData();
       files.forEach((file, index) => {
+        console.log(`🔍 Adding file ${index}:`, file.name, file.type, file.size);
         formData.append('images', file);
       });
 
@@ -115,18 +117,24 @@ class TurfService {
         ...(token && { Authorization: `Bearer ${token}` })
       };
 
+      console.log('🔍 Making upload request to:', `http://localhost:5001/api/upload/images`);
       const response = await fetch(`http://localhost:5001/api/upload/images`, {
         method: 'POST',
         headers,
         body: formData
       });
 
+      console.log('🔍 Upload response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Upload error response:', errorData);
         throw new Error(errorData.message || 'Upload failed');
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('🔍 Upload success response:', result);
+      return result;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -144,7 +152,8 @@ class TurfService {
       errors.push('Location address is required');
     }
 
-    if (!data.location || !data.location.coordinates) {
+    if (!data.location || !data.location.coordinates ||
+        !data.location.coordinates.lat || !data.location.coordinates.lng) {
       errors.push('Location coordinates are required');
     }
 
@@ -167,14 +176,17 @@ class TurfService {
     return {
       name: data.name,
       location: {
-        address: data.location.address,
+        address: data.location?.address || '',
         coordinates: {
-          lat: data.location.coordinates.lat,
-          lng: data.location.coordinates.lng
+          lat: data.location?.coordinates?.lat || 0,
+          lng: data.location?.coordinates?.lng || 0
         }
       },
-      pricePerHour: parseFloat(data.pricePerHour),
-      images: data.images
+      pricePerHour: parseFloat(data.pricePerHour) || 0,
+      images: data.images || [],
+      sport: data.sport || '',
+      description: data.description || '',
+      amenities: data.amenities || []
     };
   }
 

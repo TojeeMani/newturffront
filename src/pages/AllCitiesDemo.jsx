@@ -6,7 +6,7 @@ import {
   ChartBarIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline';
-import AllCitiesDisplay from '../components/AllCitiesDisplay';
+import { AllCitiesDisplay } from '../components/common';
 
 const AllCitiesDemo = () => {
   const [selectedCity, setSelectedCity] = useState(null);

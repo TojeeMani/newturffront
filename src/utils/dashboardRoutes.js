@@ -20,7 +20,7 @@ export const getUserTypeDisplayName = (userType) => {
       return 'Turf Owner';
     case 'player':
     default:
-      return 'Player';
+      return 'Football Player';
   }
 };
 

@@ -1,29 +1,40 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import './index.css';
 
 import { AuthProvider } from './context/AuthContext';
-import Layout from './components/Layout';
-import ProtectedRoute from './components/ProtectedRoute';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import OTPVerificationPage from './pages/OTPVerificationPage';
-import PlayerDashboard from './pages/PlayerDashboard';
-import OwnerDashboard from './pages/OwnerDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import AllCitiesDemo from './pages/AllCitiesDemo';
-// import Dashboard from './pages/Dashboard'; // Removed because file is deleted
+import { LoadingProvider } from './context/LoadingContext';
+import { Layout } from './components/layout';
+import { ProtectedRoute } from './components/common';
+import { FullPageLoader } from './components/ui/Loading';
 
-import './index.css';
+// Lazy load components for better performance
+const Home = React.lazy(() => import('./pages/Home'));
+const Login = React.lazy(() => import('./features/auth/Login'));
+const Register = React.lazy(() => import('./features/auth/Register'));
+const ForgotPassword = React.lazy(() => import('./features/auth/ForgotPassword'));
+const ResetPassword = React.lazy(() => import('./features/auth/ResetPassword'));
+const OTPVerificationPage = React.lazy(() => import('./features/auth/OTPVerificationPage'));
+const PlayerDashboard = React.lazy(() => import('./features/dashboard/PlayerDashboard'));
+const OwnerDashboard = React.lazy(() => import('./features/dashboard/OwnerDashboard'));
+const AdminDashboard = React.lazy(() => import('./features/dashboard/AdminDashboard'));
+const AllCitiesDemo = React.lazy(() => import('./pages/AllCitiesDemo'));
+const ProfileSettings = React.lazy(() => import('./features/profile/ProfileSettings'));
+const AddTurf = React.lazy(() => import('./features/turfs/AddTurf'));
+const LoadingDemo = React.lazy(() => import('./pages/LoadingDemo'));
+
+// Custom Loading component for Suspense
+const SuspenseLoader = () => (
+  <FullPageLoader message="Loading page..." type="football" />
+);
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="App">
+    <LoadingProvider>
+      <AuthProvider>
+        <Router>
+          <div className="App">
           {/* Toast Notifications */}
           <Toaster
             position="top-right"
@@ -66,103 +77,115 @@ function App() {
               },
             }}
           />
-          <Routes>
-            <Route path="/" element={<Layout><Home /></Layout>} />
-            <Route path="/cities" element={<Layout><AllCitiesDemo /></Layout>} />
-            <Route 
-              path="/login" 
-              element={
-                <ProtectedRoute requireAuth={false}>
-                  <Layout><Login /></Layout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/register" 
-              element={
-                <ProtectedRoute requireAuth={false}>
-                  <Layout><Register /></Layout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route
-              path="/forgot-password"
-              element={
-                <ProtectedRoute requireAuth={false}>
-                  <Layout><ForgotPassword /></Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/reset-password/:resetToken"
-              element={
-                <ProtectedRoute requireAuth={false}>
-                  <Layout><ResetPassword /></Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/verify-otp"
-              element={
-                <ProtectedRoute requireAuth={false}>
-                  <OTPVerificationPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/player-dashboard"
-              element={
-                <ProtectedRoute requireAuth={true}>
-                  <Layout><PlayerDashboard /></Layout>
-                </ProtectedRoute>
-              } 
-            />
-            <Route
-              path="/owner-dashboard"
-              element={
-                <ProtectedRoute requireAuth={true} requiredRole="owner">
-                  <OwnerDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute requireAuth={true} requiredRole="admin">
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin-dashboard"
-              element={
-                <ProtectedRoute requireAuth={true} requiredRole="admin">
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/turfs" 
-              element={<Layout><Home /></Layout>} 
-            />
-            <Route 
-              path="/tournaments" 
-              element={<Layout><Home /></Layout>} 
-            />
-            {/* <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute requireAuth={true}>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            /> */}
+          <Suspense fallback={<SuspenseLoader />}>
+            <Routes>
+              <Route path="/" element={<Layout><Home /></Layout>} />
+              <Route path="/cities" element={<Layout><AllCitiesDemo /></Layout>} />
+              <Route path="/loading-demo" element={<Layout><LoadingDemo /></Layout>} />
+              <Route
+                path="/login"
+                element={
+                  <ProtectedRoute requireAuth={false}>
+                    <Layout><Login /></Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  <ProtectedRoute requireAuth={false}>
+                    <Layout><Register /></Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/forgot-password"
+                element={
+                  <ProtectedRoute requireAuth={false}>
+                    <Layout><ForgotPassword /></Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reset-password/:resetToken"
+                element={
+                  <ProtectedRoute requireAuth={false}>
+                    <Layout><ResetPassword /></Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/verify-otp"
+                element={
+                  <ProtectedRoute requireAuth={false}>
+                    <OTPVerificationPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/player-dashboard"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <Layout><PlayerDashboard /></Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/owner-dashboard"
+                element={
+                  <ProtectedRoute requireAuth={true} requiredRole="owner">
+                    <OwnerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requireAuth={true} requiredRole="admin">
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin-dashboard"
+                element={
+                  <ProtectedRoute requireAuth={true} requiredRole="admin">
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile/settings"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <ProfileSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/add-turf"
+                element={
+                  <ProtectedRoute requireAuth={true} requiredRole="owner">
+                    <AddTurf />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/turfs"
+                element={<Layout><Home /></Layout>}
+              />
+              <Route
+                path="/tournaments"
+                element={<Layout><Home /></Layout>}
+              />
 
-            {/* Add more protected routes here as needed */}
-          </Routes>
+              {/* Add more protected routes here as needed */}
+            </Routes>
+          </Suspense>
         </div>
       </Router>
     </AuthProvider>
+    </LoadingProvider>
   );
 }
 

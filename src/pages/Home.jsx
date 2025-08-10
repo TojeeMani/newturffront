@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import EnhancedImage from '../components/EnhancedImage';
+import { EnhancedImage, CardSkeleton, SearchLoader } from '../components/ui';
 import { getDashboardRoute } from '../utils/dashboardRoutes';
+import turfService from '../services/turfService';
 import {
   ChevronDownIcon,
   MapPinIcon,
@@ -27,7 +28,6 @@ import {
 } from '@heroicons/react/24/solid';
 
 import {
-  featuredTurfs,
   liveMatches,
   upcomingTournaments,
   aiFeatures,
@@ -40,6 +40,8 @@ const Home = () => {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [featuredTurfs, setFeaturedTurfs] = useState([]);
+  const [loadingTurfs, setLoadingTurfs] = useState(true);
 
   // Redirect admins and owners to their dashboards
   useEffect(() => {
@@ -48,6 +50,27 @@ const Home = () => {
       navigate(dashboardRoute, { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
+
+  // Fetch featured turfs
+  useEffect(() => {
+    const fetchFeaturedTurfs = async () => {
+      try {
+        setLoadingTurfs(true);
+        const response = await turfService.getAllTurfs({
+          limit: 6,
+          sort: '-rating,-createdAt'
+        });
+        setFeaturedTurfs(response.data || []);
+      } catch (error) {
+        console.error('Failed to fetch featured turfs:', error);
+        setFeaturedTurfs([]);
+      } finally {
+        setLoadingTurfs(false);
+      }
+    };
+
+    fetchFeaturedTurfs();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -180,36 +203,56 @@ const Home = () => {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {featuredTurfs.slice(0, 6).map((turf, index) => (
-              <motion.div
-                key={turf.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="bg-white rounded-2xl shadow-lg overflow-hidden card-hover"
-              >
-                <div className="relative">
-                  <img
-                    src={turf.image}
-                    alt={turf.name}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full p-2">
-                    <HeartIcon className="w-5 h-5 text-gray-600" />
+          {loadingTurfs ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+              {[...Array(6)].map((_, index) => (
+                <CardSkeleton key={index} />
+              ))}
+            </div>
+          ) : featuredTurfs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+              {featuredTurfs.slice(0, 6).map((turf, index) => (
+                <motion.div
+                  key={turf._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="bg-white rounded-2xl shadow-lg overflow-hidden card-hover"
+                >
+                  <div className="relative">
+                    <EnhancedImage
+                      src={turf.images?.[0]}
+                      alt={turf.name}
+                      className="w-full h-48 object-cover"
+                      sport={turf.sport?.toLowerCase()}
+                    />
+                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full p-2">
+                      <HeartIcon className="w-5 h-5 text-gray-600" />
+                    </div>
+                    <div className="absolute bottom-4 left-4 bg-primary-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                      {turf.sport}
+                    </div>
+                    {turf.isFeatured && (
+                      <div className="absolute top-4 left-4 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
+                        <FireIconSolid className="w-3 h-3 mr-1" />
+                        Featured
+                      </div>
+                    )}
                   </div>
-                  <div className="absolute bottom-4 left-4 bg-primary-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                    {turf.sport}
-                  </div>
-                </div>
                 
                 <div className="p-6">
                   <h3 className="text-xl font-bold text-gray-900 mb-2">{turf.name}</h3>
                   <div className="flex items-center text-gray-600 mb-3">
                     <MapPinIcon className="w-4 h-4 mr-1" />
-                    <span className="text-sm">{turf.location}</span>
+                    <span className="text-sm">{turf.location?.address || 'Location not specified'}</span>
                   </div>
-                  
+
+                  {turf.description && (
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                      {turf.description}
+                    </p>
+                  )}
+
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center">
                       <div className="flex items-center">
@@ -217,7 +260,7 @@ const Home = () => {
                           <StarIconSolid
                             key={i}
                             className={`w-4 h-4 ${
-                              i < Math.floor(turf.rating)
+                              i < Math.floor(turf.rating || 0)
                                 ? 'text-yellow-400'
                                 : 'text-gray-300'
                             }`}
@@ -225,25 +268,33 @@ const Home = () => {
                         ))}
                       </div>
                       <span className="ml-2 text-sm text-gray-600">
-                        {turf.rating}
+                        {turf.rating || 'New'}
+                        {turf.totalReviews > 0 && ` (${turf.totalReviews})`}
                       </span>
                     </div>
                     <div className="text-lg font-bold text-primary-600">
-                      {turf.price}
+                      ₹{turf.pricePerHour}/hr
                     </div>
                   </div>
-                  
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {turf.amenities.slice(0, 3).map((amenity, i) => (
-                      <span
-                        key={i}
-                        className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs"
-                      >
-                        {amenity}
-                      </span>
-                    ))}
-                  </div>
-                  
+
+                  {turf.amenities && turf.amenities.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {turf.amenities.slice(0, 3).map((amenity, i) => (
+                        <span
+                          key={i}
+                          className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs"
+                        >
+                          {amenity}
+                        </span>
+                      ))}
+                      {turf.amenities.length > 3 && (
+                        <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">
+                          +{turf.amenities.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <button className="w-full btn-primary">
                     Book Now
                   </button>
@@ -251,13 +302,26 @@ const Home = () => {
               </motion.div>
             ))}
           </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="text-gray-500 mb-4">
+                <MapPinIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-xl font-medium text-gray-900 mb-2">No Turfs Available</h3>
+                <p className="text-gray-600">
+                  We're working on adding more turfs to your area. Check back soon!
+                </p>
+              </div>
+            </div>
+          )}
 
-          <div className="text-center">
-            <button className="btn-secondary">
-              View All Turfs
-              <ArrowRightIcon className="w-5 h-5 ml-2" />
-            </button>
-          </div>
+          {featuredTurfs.length > 0 && (
+            <div className="text-center">
+              <button className="btn-secondary">
+                View All Turfs
+                <ArrowRightIcon className="w-5 h-5 ml-2" />
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
