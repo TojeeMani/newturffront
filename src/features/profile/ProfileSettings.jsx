@@ -129,7 +129,9 @@ const ProfileSettings = () => {
 
     setLoading(true);
     try {
-      await updateProfile(formData);
+      console.log('🖼️ ProfileSettings - Submitting form data:', formData);
+      const result = await updateProfile(formData);
+      console.log('🖼️ ProfileSettings - Update result:', result);
       setSuccess('Profile updated successfully!');
       toast.success('Profile updated successfully!');
       

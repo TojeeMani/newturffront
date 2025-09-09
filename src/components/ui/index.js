@@ -17,3 +17,7 @@ export {
   TableRowSkeleton,
   SearchLoader
 } from './Loading';
+
+// Theme Components
+export { default as ThemeToggle, CompactThemeToggle, ThemeSelector } from './ThemeToggle';
+export { default as ChatWidget } from './ChatWidget';

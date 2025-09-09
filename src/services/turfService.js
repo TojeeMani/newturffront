@@ -38,17 +38,16 @@ class TurfService {
   // Get owner's turfs (private)
   async getMyTurfs() {
     try {
-      console.log('🔍 TurfService - Making API call to /turfs/owner/my');
-      const token = localStorage.getItem('token');
-      console.log('🔍 TurfService - Token available:', !!token);
-
       const response = await api.request('/turfs/owner/my');
-      console.log('🔍 TurfService - API response received:', response);
       return response;
     } catch (error) {
-      console.error('❌ TurfService - API call failed:', error);
       throw this.handleError(error);
     }
+  }
+
+  // Alias for getMyTurfs
+  async getOwnerTurfs() {
+    return this.getMyTurfs();
   }
 
   // Create new turf (private/owner)
@@ -104,38 +103,28 @@ class TurfService {
   // Upload turf images
   async uploadImages(files) {
     try {
-      console.log('🔍 TurfService.uploadImages called with:', files);
       const formData = new FormData();
-      files.forEach((file, index) => {
-        console.log(`🔍 Adding file ${index}:`, file.name, file.type, file.size);
-        formData.append('images', file);
-      });
+      files.forEach((file) => { formData.append('images', file); });
 
-      // For file uploads, we need to handle the headers differently
       const token = localStorage.getItem('token');
-      const headers = {
-        ...(token && { Authorization: `Bearer ${token}` })
-      };
+      if (!token) throw new Error('You must be logged in to upload images');
+      const headers = { Authorization: `Bearer ${token}` };
 
-      console.log('🔍 Making upload request to:', `http://localhost:5001/api/upload/images`);
-      const response = await fetch(`http://localhost:5001/api/upload/images`, {
-        method: 'POST',
-        headers,
-        body: formData
-      });
-
-      console.log('🔍 Upload response status:', response.status);
-
+      const uploadUrl = `${api.baseURL}/upload/images`;
+      const response = await fetch(uploadUrl, { method: 'POST', headers, body: formData });
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Upload error response:', errorData);
-        throw new Error(errorData.message || 'Upload failed');
+        let errorData = {};
+        try {
+          const contentType = response.headers.get('content-type') || '';
+          errorData = contentType.includes('application/json') ? await response.json() : { message: await response.text() };
+        } catch {}
+        const message = errorData.message || errorData.error || response.statusText || 'Upload failed';
+        throw new Error(message);
       }
-
       const result = await response.json();
-      console.log('🔍 Upload success response:', result);
       return result;
     } catch (error) {
+      if (error && error.message) throw new Error(error.message);
       throw this.handleError(error);
     }
   }
@@ -143,64 +132,108 @@ class TurfService {
   // Validate turf data
   validateTurfData(data) {
     const errors = [];
-
-    if (!data.name || data.name.trim().length === 0) {
-      errors.push('Turf name is required');
-    }
-
-    if (!data.location || !data.location.address) {
-      errors.push('Location address is required');
-    }
-
-    if (!data.location || !data.location.coordinates ||
-        !data.location.coordinates.lat || !data.location.coordinates.lng) {
-      errors.push('Location coordinates are required');
-    }
-
-    if (!data.pricePerHour || data.pricePerHour <= 0) {
-      errors.push('Valid price per hour is required');
-    }
-
-    if (!data.images || data.images.length === 0) {
-      errors.push('At least one image is required');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
+    if (!data.name || data.name.trim().length === 0) errors.push('Turf name is required');
+    if (!data.location || !data.location.address) errors.push('Location address is required');
+    if (!data.pricePerHour || data.pricePerHour <= 0) errors.push('Valid price per hour is required');
+    if (!data.images || data.images.length === 0) errors.push('At least one image is required');
+    return { isValid: errors.length === 0, errors };
   }
 
   // Format turf data for API
   formatTurfData(data) {
     return {
       name: data.name,
-      location: {
-        address: data.location?.address || '',
-        coordinates: {
-          lat: data.location?.coordinates?.lat || 0,
-          lng: data.location?.coordinates?.lng || 0
-        }
-      },
+      location: { address: data.location?.address || '', coordinates: data.location?.coordinates || null },
       pricePerHour: parseFloat(data.pricePerHour) || 0,
       images: data.images || [],
       sport: data.sport || '',
       description: data.description || '',
-      amenities: data.amenities || []
+      amenities: data.amenities || [],
+      availableSlots: data.availableSlots || {},
+      slotDuration: parseInt(data.slotDuration) || 60,
+      advanceBookingDays: parseInt(data.advanceBookingDays) || 30
     };
+  }
+
+  // Check slot availability for a specific turf and date
+  async checkSlotAvailability(turfId, date, startTime, endTime) {
+    try {
+      const qs = new URLSearchParams({ date, startTime, endTime }).toString();
+      const response = await api.request(`/turfs/${turfId}/slots/check?${qs}`);
+      // Normalize return to boolean
+      const available = response?.data?.available ?? response?.available ?? false;
+      return { available };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Get available slots for a turf on a specific date
+  async getAvailableSlots(turfId, date) {
+    try {
+      const response = await api.request(`/turfs/${turfId}/slots/available?date=${date}`);
+      return response;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Book a slot (offline booking by owner)
+  async bookSlot(turfId, bookingData) {
+    try {
+      const response = await api.request(`/turfs/${turfId}/slots/book`, {
+        method: 'POST',
+        body: JSON.stringify(bookingData)
+      });
+      return response;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Cancel a slot booking
+  async cancelSlotBooking(turfId, date, startTime, endTime) {
+    try {
+      const response = await api.request(`/turfs/${turfId}/slots/cancel`, {
+        method: 'DELETE',
+        body: JSON.stringify({ date, startTime, endTime })
+      });
+      return response;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Get turf bookings for a specific date
+  async getTurfBookings(turfId, date) {
+    try {
+      const response = await api.request(`/turfs/${turfId}/bookings?date=${date}`);
+      return response;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Get all bookings for owner's turfs
+  async getOwnerBookings(filters = {}) {
+    try {
+      const queryString = new URLSearchParams(filters).toString();
+      const endpoint = queryString ? `/turfs/owner/bookings?${queryString}` : '/turfs/owner/bookings';
+      const response = await api.request(endpoint);
+      return response;
+    } catch (error) {
+      throw this.handleError(error);
+    }
   }
 
   // Handle API errors
   handleError(error) {
     if (error.response) {
-      // Server responded with error status
-      const message = error.response.data?.message || 'An error occurred';
+      const message = error.response.data?.message || error.response.data?.error || 'An error occurred';
       return new Error(message);
     } else if (error.request) {
-      // Request was made but no response received
       return new Error('Network error. Please check your connection.');
     } else {
-      // Something else happened
       return new Error('An unexpected error occurred.');
     }
   }

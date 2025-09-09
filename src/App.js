@@ -3,8 +3,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import './index.css';
 
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoadingProvider } from './context/LoadingContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { SessionWarning } from './components/common';
 import { Layout } from './components/layout';
 import { ProtectedRoute } from './components/common';
 import { FullPageLoader } from './components/ui/Loading';
@@ -18,70 +20,120 @@ const ResetPassword = React.lazy(() => import('./features/auth/ResetPassword'));
 const OTPVerificationPage = React.lazy(() => import('./features/auth/OTPVerificationPage'));
 const PlayerDashboard = React.lazy(() => import('./features/dashboard/PlayerDashboard'));
 const OwnerDashboard = React.lazy(() => import('./features/dashboard/OwnerDashboard'));
+const OwnerTurfsPage = React.lazy(() => import('./features/dashboard/OwnerTurfsPage'));
+const OwnerBookingsPage = React.lazy(() => import('./features/dashboard/OwnerBookingsPage'));
 const AdminDashboard = React.lazy(() => import('./features/dashboard/AdminDashboard'));
-const AllCitiesDemo = React.lazy(() => import('./pages/AllCitiesDemo'));
 const ProfileSettings = React.lazy(() => import('./features/profile/ProfileSettings'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
 const AddTurf = React.lazy(() => import('./features/turfs/AddTurf'));
-const LoadingDemo = React.lazy(() => import('./pages/LoadingDemo'));
+const TurfDetails = React.lazy(() => import('./features/turfs/TurfDetails'));
+const EditTurf = React.lazy(() => import('./features/turfs/EditTurf'));
+const MyBookings = React.lazy(() => import('./features/bookings/MyBookings'));
 
 // Custom Loading component for Suspense
 const SuspenseLoader = () => (
   <FullPageLoader message="Loading page..." type="football" />
 );
 
+// Theme-aware Toaster component
+const ThemedToaster = () => {
+  const { isDarkMode } = useTheme();
+
+  return (
+    <Toaster
+      position="top-right"
+      reverseOrder={false}
+      gutter={8}
+      containerClassName=""
+      containerStyle={{}}
+      toastOptions={{
+        duration: 4000,
+        style: {
+          borderRadius: '12px',
+          background: isDarkMode ? '#1f2937' : '#fff',
+          color: isDarkMode ? '#f9fafb' : '#374151',
+          fontSize: '14px',
+          fontWeight: '500',
+          padding: '16px 20px',
+          boxShadow: isDarkMode
+            ? '0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)'
+            : '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+          maxWidth: '400px',
+        },
+        success: {
+          style: {
+            border: isDarkMode ? '1px solid #059669' : '1px solid #10b981',
+            background: isDarkMode ? '#064e3b' : '#f0fdf4',
+          },
+          iconTheme: {
+            primary: isDarkMode ? '#059669' : '#10b981',
+            secondary: isDarkMode ? '#064e3b' : '#f0fdf4',
+          },
+        },
+        error: {
+          style: {
+            border: isDarkMode ? '1px solid #dc2626' : '1px solid #ef4444',
+            background: isDarkMode ? '#7f1d1d' : '#fef2f2',
+          },
+          iconTheme: {
+            primary: isDarkMode ? '#dc2626' : '#ef4444',
+            secondary: isDarkMode ? '#7f1d1d' : '#fef2f2',
+          },
+        },
+      }}
+    />
+  );
+};
+
+// Session Warning Wrapper that can access auth context
+const SessionWarningWrapper = () => {
+  const { sessionWarning, logout, extendSession, hideSessionWarning } = useAuth();
+
+  const handleExtendSession = async () => {
+    const success = await extendSession();
+    if (!success) {
+      logout();
+    }
+  };
+
+  const handleSessionLogout = () => {
+    logout();
+  };
+
+  const handleDismissWarning = () => {
+    hideSessionWarning();
+  };
+
+  if (!sessionWarning) return null;
+
+  return (
+    <SessionWarning
+      isVisible={sessionWarning.show}
+      minutesLeft={sessionWarning.minutesLeft}
+      onExtend={handleExtendSession}
+      onLogout={handleSessionLogout}
+      onDismiss={handleDismissWarning}
+    />
+  );
+};
+
+
+
 function App() {
   return (
-    <LoadingProvider>
-      <AuthProvider>
+    <ThemeProvider>
+      <LoadingProvider>
+        <AuthProvider>
         <Router>
-          <div className="App">
-          {/* Toast Notifications */}
-          <Toaster
-            position="top-right"
-            reverseOrder={false}
-            gutter={8}
-            containerClassName=""
-            containerStyle={{}}
-            toastOptions={{
-              duration: 4000,
-              style: {
-                borderRadius: '12px',
-                background: '#fff',
-                color: '#374151',
-                fontSize: '14px',
-                fontWeight: '500',
-                padding: '16px 20px',
-                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                border: '1px solid #e5e7eb',
-                maxWidth: '400px',
-              },
-              success: {
-                style: {
-                  border: '1px solid #10b981',
-                  background: '#f0fdf4',
-                },
-                iconTheme: {
-                  primary: '#10b981',
-                  secondary: '#f0fdf4',
-                },
-              },
-              error: {
-                style: {
-                  border: '1px solid #ef4444',
-                  background: '#fef2f2',
-                },
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fef2f2',
-                },
-              },
-            }}
-          />
+          <div className="App min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+          {/* Session Warning */}
+          <SessionWarningWrapper />
+          {/* Theme-aware Toast Notifications */}
+          <ThemedToaster />
           <Suspense fallback={<SuspenseLoader />}>
             <Routes>
               <Route path="/" element={<Layout><Home /></Layout>} />
-              <Route path="/cities" element={<Layout><AllCitiesDemo /></Layout>} />
-              <Route path="/loading-demo" element={<Layout><LoadingDemo /></Layout>} />
               <Route
                 path="/login"
                 element={
@@ -131,10 +183,34 @@ function App() {
                 }
               />
               <Route
+                path="/bookings/my"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <Layout><MyBookings /></Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/owner-dashboard"
                 element={
                   <ProtectedRoute requireAuth={true} requiredRole="owner">
                     <OwnerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/owner/bookings"
+                element={
+                  <ProtectedRoute requireAuth={true} requiredRole="owner">
+                    <OwnerBookingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/owner-dashboard/turfs"
+                element={
+                  <ProtectedRoute requireAuth={true} requiredRole="owner">
+                    <OwnerTurfsPage />
                   </ProtectedRoute>
                 }
               />
@@ -163,6 +239,14 @@ function App() {
                 }
               />
               <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/add-turf"
                 element={
                   <ProtectedRoute requireAuth={true} requiredRole="owner">
@@ -171,8 +255,20 @@ function App() {
                 }
               />
               <Route
+                path="/owner/turfs/:id/edit"
+                element={
+                  <ProtectedRoute requireAuth={true} requiredRole="owner">
+                    <EditTurf />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/turfs"
                 element={<Layout><Home /></Layout>}
+              />
+              <Route
+                path="/turfs/:id"
+                element={<Layout><TurfDetails /></Layout>}
               />
               <Route
                 path="/tournaments"
@@ -184,8 +280,9 @@ function App() {
           </Suspense>
         </div>
       </Router>
-    </AuthProvider>
-    </LoadingProvider>
+        </AuthProvider>
+      </LoadingProvider>
+    </ThemeProvider>
   );
 }
 

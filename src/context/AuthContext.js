@@ -7,6 +7,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import apiService from '../services/api';
+import sessionManager from '../utils/sessionManager';
 
 // Initial state
 const initialState = {
@@ -15,7 +16,11 @@ const initialState = {
   isAuthenticated: false,
   loading: true,
   error: null,
-  needsProfileCompletion: false
+  needsProfileCompletion: false,
+  sessionWarning: {
+    show: false,
+    minutesLeft: 0
+  }
 };
 
 // Action types
@@ -26,7 +31,9 @@ const AUTH_ACTIONS = {
   LOGOUT: 'LOGOUT',
   CLEAR_ERROR: 'CLEAR_ERROR',
   SET_LOADING: 'SET_LOADING',
-  UPDATE_PROFILE: 'UPDATE_PROFILE'
+  UPDATE_PROFILE: 'UPDATE_PROFILE',
+  SHOW_SESSION_WARNING: 'SHOW_SESSION_WARNING',
+  HIDE_SESSION_WARNING: 'HIDE_SESSION_WARNING'
 };
 
 // Reducer
@@ -84,12 +91,36 @@ const authReducer = (state, action) => {
       };
     
     case AUTH_ACTIONS.UPDATE_PROFILE:
-      return {
+      console.log('🔄 AuthReducer - UPDATE_PROFILE action received:', action.payload);
+      const newState = {
         ...state,
         user: action.payload.user,
         needsProfileCompletion: action.payload.user?.needsProfileCompletion || false
       };
-    
+      console.log('✅ AuthReducer - New state after profile update:', {
+        avatar: newState.user?.avatar,
+        needsProfileCompletion: newState.needsProfileCompletion
+      });
+      return newState;
+
+    case AUTH_ACTIONS.SHOW_SESSION_WARNING:
+      return {
+        ...state,
+        sessionWarning: {
+          show: true,
+          minutesLeft: action.payload
+        }
+      };
+
+    case AUTH_ACTIONS.HIDE_SESSION_WARNING:
+      return {
+        ...state,
+        sessionWarning: {
+          show: false,
+          minutesLeft: 0
+        }
+      };
+
     default:
       return state;
   }
@@ -112,11 +143,13 @@ export const AuthProvider = ({ children }) => {
           // If we have a token, try to get user info
           try {
             const response = await apiService.getMe();
+            console.log('🔧 AuthContext: getMe response:', response);
             if (response.success) {
+              console.log('🔧 AuthContext: User data from getMe:', response.data);
               dispatch({
                 type: AUTH_ACTIONS.LOGIN_SUCCESS,
                 payload: {
-                  user: response.user,
+                  user: response.data,
                   token: token
                 }
               });
@@ -165,6 +198,53 @@ export const AuthProvider = ({ children }) => {
 
     return () => unsubscribe();
   }, []);
+
+  // Session management functions (defined before useEffect)
+  const handleSessionExpired = useCallback(() => {
+    console.log('Session expired, logging out...');
+    // Clear all stored authentication data
+    localStorage.removeItem('token');
+    sessionManager.stopMonitoring();
+    dispatch({ type: AUTH_ACTIONS.LOGOUT });
+  }, []);
+
+  const handleSessionWarning = useCallback((minutesLeft) => {
+    dispatch({
+      type: AUTH_ACTIONS.SHOW_SESSION_WARNING,
+      payload: minutesLeft
+    });
+  }, []);
+
+  const hideSessionWarning = useCallback(() => {
+    dispatch({ type: AUTH_ACTIONS.HIDE_SESSION_WARNING });
+  }, []);
+
+  const extendSession = useCallback(async () => {
+    try {
+      const success = await sessionManager.refreshSession();
+      if (success) {
+        hideSessionWarning();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Session extension failed:', error);
+      return false;
+    }
+  }, [hideSessionWarning]);
+
+  // Monitor session when authenticated
+  useEffect(() => {
+    if (state.isAuthenticated && state.token) {
+      sessionManager.init(handleSessionExpired, handleSessionWarning);
+    } else {
+      sessionManager.stopMonitoring();
+    }
+
+    return () => {
+      sessionManager.stopMonitoring();
+    };
+  }, [state.isAuthenticated, state.token, handleSessionExpired, handleSessionWarning]);
 
   // Login function
   const login = useCallback(async (credentials) => {
@@ -360,20 +440,26 @@ export const AuthProvider = ({ children }) => {
   // Update profile function
   const updateProfile = useCallback(async (profileData) => {
     try {
+      console.log('🔄 AuthContext - Updating profile with data:', profileData);
       const response = await apiService.updateProfile(profileData);
+      console.log('🔄 AuthContext - Profile update response:', response);
       
       if (response.success) {
+        console.log('🔄 AuthContext - Dispatching UPDATE_PROFILE action with user:', response.user);
         dispatch({
           type: AUTH_ACTIONS.UPDATE_PROFILE,
           payload: {
             user: response.user
           }
         });
+        console.log('✅ AuthContext - Profile update dispatched successfully');
+      } else {
+        console.warn('⚠️ AuthContext - Profile update response not successful:', response);
       }
       
       return response;
     } catch (error) {
-      console.error('Profile update failed:', error);
+      console.error('❌ AuthContext - Profile update failed:', error);
       throw error;
     }
   }, []);
@@ -381,6 +467,7 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = useCallback(async () => {
     try {
+      sessionManager.stopMonitoring();
       await signOut(auth);
     } catch (error) {
       console.error('Firebase logout failed:', error);
@@ -388,6 +475,40 @@ export const AuthProvider = ({ children }) => {
       // Clear all stored authentication data
       localStorage.removeItem('token');
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
+    }
+  }, []);
+
+  // Forgot password function
+  const forgotPassword = useCallback(async (email) => {
+    try {
+      const response = await apiService.post('/auth/forgotpassword', { email });
+      return {
+        success: true,
+        message: response.message || 'Password reset email sent successfully'
+      };
+    } catch (error) {
+      console.error('Forgot password failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to send reset email'
+      };
+    }
+  }, []);
+
+  // Reset password function
+  const resetPassword = useCallback(async (resetToken, password) => {
+    try {
+      const response = await apiService.put(`/auth/resetpassword/${resetToken}`, { password });
+      return {
+        success: true,
+        message: response.message || 'Password reset successfully'
+      };
+    } catch (error) {
+      console.error('Reset password failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to reset password'
+      };
     }
   }, []);
 
@@ -405,7 +526,11 @@ export const AuthProvider = ({ children }) => {
     loginWithOTP,
     updateProfile,
     logout,
-    clearError
+    forgotPassword,
+    resetPassword,
+    clearError,
+    hideSessionWarning,
+    extendSession
   };
 
   return (

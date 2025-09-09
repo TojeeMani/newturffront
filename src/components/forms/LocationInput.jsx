@@ -203,7 +203,17 @@ const LocationInput = ({
   // Initialize search term from value
   useEffect(() => {
     if (value && value !== searchTerm) {
-      setSearchTerm(value);
+      // Handle different value types
+      let displayValue = '';
+      if (typeof value === 'string') {
+        displayValue = value;
+      } else if (typeof value === 'object' && value !== null) {
+        displayValue = value.address || value.formatted || value.display || value.name || '';
+      }
+
+      if (displayValue && displayValue !== searchTerm) {
+        setSearchTerm(displayValue);
+      }
     }
   }, [value, searchTerm]);
 

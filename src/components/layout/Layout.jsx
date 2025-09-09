@@ -3,7 +3,7 @@ import Navigation from './Navigation';
 
 const Layout = ({ children }) => {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
       <Navigation />
       <main className="pt-16">
         {children}

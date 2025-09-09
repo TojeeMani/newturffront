@@ -42,6 +42,8 @@ const Register = () => {
     businessPhone: '',
     turfCount: '',
     turfLocation: '', // Separate field for turf location
+    sportTypes: [], // Multiple sport types for the turf
+    sportType: '', // Keep for backward compatibility
     // Document uploads
     govIdFile: null, // Government-issued ID (required)
     ownershipProofFile: null, // Turf Ownership Proof (required)
@@ -111,6 +113,9 @@ const Register = () => {
       { type: 'required', field: 'Number of Turfs' },
       { type: 'numeric', field: 'Number of Turfs' },
       { type: 'positive', field: 'Number of Turfs' }
+    ],
+    sportType: [
+      { type: 'required', field: 'Sport Type' }
     ]
   };
   // Removed OTP verification data state since we're using navigation
@@ -145,6 +150,15 @@ const Register = () => {
       preferredSports: prev.preferredSports.includes(sport)
         ? prev.preferredSports.filter(s => s !== sport)
         : [...prev.preferredSports, sport]
+    }));
+  };
+
+  const handleOwnerSportToggle = (sport) => {
+    setFormData(prev => ({
+      ...prev,
+      sportTypes: prev.sportTypes.includes(sport)
+        ? prev.sportTypes.filter(s => s !== sport)
+        : [...prev.sportTypes, sport]
     }));
   };
 
@@ -183,6 +197,7 @@ const Register = () => {
         if (!formData.businessPhone) newErrors.businessPhone = 'Business phone is required';
         if (!formData.turfCount) newErrors.turfCount = 'Number of turfs is required';
         if (!formData.turfLocation) newErrors.turfLocation = 'Turf location is required';
+        if (formData.sportTypes.length === 0) newErrors.sportTypes = 'Please select at least one sport type';
         if (!formData.govIdFile) newErrors.govIdFile = 'Government-issued ID is required';
         if (!formData.ownershipProofFile) newErrors.ownershipProofFile = 'Turf Ownership Proof is required';
       }
@@ -617,6 +632,29 @@ const Register = () => {
                 <option value="10+">4 Turfs</option>
               </select>
               {errors.turfCount && <p className="mt-1 text-sm text-red-600">{errors.turfCount}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Sport Types (Select all that apply)
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {sports.map((sport) => (
+                  <button
+                    key={sport}
+                    type="button"
+                    onClick={() => handleOwnerSportToggle(sport)}
+                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                      formData.sportTypes.includes(sport)
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {sport}
+                  </button>
+                ))}
+              </div>
+              {errors.sportTypes && <p className="mt-1 text-sm text-red-600">{errors.sportTypes}</p>}
             </div>
           </div>
           {userType === 'owner' && (

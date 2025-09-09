@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { EnhancedImage, CardSkeleton, SearchLoader } from '../components/ui';
+import { EnhancedImage, CardSkeleton, SearchLoader, ChatWidget } from '../components/ui';
 import { getDashboardRoute } from '../utils/dashboardRoutes';
 import turfService from '../services/turfService';
 import {
@@ -84,14 +84,14 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300">
 
       {/* Hero Section */}
       <section id="hero" className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <EnhancedImage
-            src="https://images.unsplash.com/photo-1551698618-1dfe5d97d256?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
-            alt="Football Stadium"
+            src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+            alt="Football Turf Field"
             className="w-full h-full object-cover"
             sport="hero"
             lazy={false}
@@ -217,7 +217,8 @@ const Home = () => {
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="bg-white rounded-2xl shadow-lg overflow-hidden card-hover"
+                  className="bg-white rounded-2xl shadow-lg overflow-hidden card-hover cursor-pointer"
+                  onClick={() => navigate(`/turfs/${turf._id}`)}
                 >
                   <div className="relative">
                     <EnhancedImage
@@ -799,8 +800,13 @@ const Home = () => {
           </div>
         </div>
       </footer>
+      {/* Floating AI Chat Widget */}
+      <ChatWidget />
     </div>
   );
 };
 
 export default Home;
+// Chat widget is mounted globally on Home
+// It will render a floating button at bottom-right
+// and open a small chat window when clicked.

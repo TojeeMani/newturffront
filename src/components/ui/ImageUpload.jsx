@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import { X, Camera } from 'lucide-react';
 
 const ImageUpload = ({ 
   images = [], 
@@ -102,7 +102,7 @@ const ImageUpload = ({
         onDragOver={handleDrag}
         onDrop={handleDrop}
       >
-        <PhotoIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <Camera className="mx-auto h-12 w-12 text-gray-400 mb-4" />
         <div className="text-sm text-gray-600 mb-4">
           <button
             type="button"
@@ -123,25 +123,31 @@ const ImageUpload = ({
         <div className="mt-4">
           <h4 className="text-sm font-medium text-gray-700 mb-2">Selected Images:</h4>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {images.map((image, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={URL.createObjectURL(image)}
-                  alt={`Preview ${index + 1}`}
-                  className="w-full h-24 object-cover rounded-lg border"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeImage(index)}
-                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <XMarkIcon className="h-4 w-4" />
-                </button>
-                <p className="text-xs text-gray-500 mt-1 truncate">
-                  {image.name}
-                </p>
-              </div>
-            ))}
+            {images.map((image, index) => {
+              // Handle both File objects and URL strings
+              const imageUrl = image instanceof File ? URL.createObjectURL(image) : image;
+              const imageName = image instanceof File ? image.name : `Image ${index + 1}`;
+              
+              return (
+                <div key={index} className="relative group">
+                  <img
+                    src={imageUrl}
+                    alt={`Preview ${index + 1}`}
+                    className="w-full h-24 object-cover rounded-lg border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <p className="text-xs text-gray-500 mt-1 truncate">
+                    {imageName}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

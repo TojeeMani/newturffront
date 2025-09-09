@@ -58,7 +58,7 @@ const DashboardHeader = ({ title }) => {
             {user?.userType === 'owner' && (
               <nav className="hidden lg:flex items-center space-x-1 bg-gray-50 rounded-lg p-1">
                 <Link
-                  to="/owner/turfs"
+                  to="/owner-dashboard/turfs"
                   className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,7 +67,7 @@ const DashboardHeader = ({ title }) => {
                   <span>My Turfs</span>
                 </Link>
                 <Link
-                  to="/owner/bookings"
+                  to="/owner-dashboard/bookings"
                   className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,7 +76,7 @@ const DashboardHeader = ({ title }) => {
                   <span>Bookings</span>
                 </Link>
                 <Link
-                  to="/owner/analytics"
+                  to="/owner-dashboard/analytics"
                   className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-white transition-all duration-200 shadow-sm hover:shadow-md"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

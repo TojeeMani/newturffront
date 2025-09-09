@@ -3,6 +3,7 @@ module.exports = {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -38,6 +39,9 @@ module.exports = {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-up': 'slideUp 0.5s ease-out',
         'bounce-slow': 'bounce 2s infinite',
+        'slide-in-from-bottom': 'slideInFromBottom 0.3s ease-out',
+        'slide-in-from-bottom-2': 'slideInFromBottom2 0.3s ease-out',
+        'spin': 'spin 1s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -47,9 +51,57 @@ module.exports = {
         slideUp: {
           '0%': { transform: 'translateY(20px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        slideInFromBottom: {
+          '0%': { transform: 'translateY(100%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        slideInFromBottom2: {
+          '0%': { transform: 'translateY(20px)', opacity: '0', scale: '0.95' },
+          '100%': { transform: 'translateY(0)', opacity: '1', scale: '1' },
         }
       }
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities }) {
+      const newUtilities = {
+        '.scrollbar-thin': {
+          'scrollbar-width': 'thin',
+        },
+        '.scrollbar-thumb-gray-300': {
+          'scrollbar-color': '#d1d5db transparent',
+        },
+        '.dark .scrollbar-thumb-gray-600': {
+          'scrollbar-color': '#4b5563 transparent',
+        },
+        '.scrollbar-thin::-webkit-scrollbar': {
+          width: '6px',
+        },
+        '.scrollbar-thin::-webkit-scrollbar-track': {
+          background: 'transparent',
+        },
+        '.scrollbar-thumb-gray-300::-webkit-scrollbar-thumb': {
+          'background-color': '#d1d5db',
+          'border-radius': '3px',
+        },
+        '.dark .scrollbar-thumb-gray-600::-webkit-scrollbar-thumb': {
+          'background-color': '#4b5563',
+          'border-radius': '3px',
+        },
+        '.animate-in': {
+          'animation-fill-mode': 'both',
+        },
+        '.fade-in': {
+          'animation-name': 'fadeIn',
+          'animation-duration': '0.3s',
+          'animation-timing-function': 'ease-out',
+        },
+        '.duration-300': {
+          'animation-duration': '0.3s',
+        },
+      }
+      addUtilities(newUtilities)
+    }
+  ],
 }

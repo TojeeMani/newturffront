@@ -24,11 +24,23 @@ class ApiService {
 
   // Helper method to handle API responses
   async handleResponse(response) {
-    const data = await response.json();
+    let data = null;
+    try {
+      // Only attempt JSON parse when content-type is JSON
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        data = text ? { message: text } : {};
+      }
+    } catch (_) {
+      data = {};
+    }
 
     if (!response.ok) {
-      // Create error with additional properties
-      const error = new Error(data.message || 'Something went wrong');
+      const message = data.message || data.error || response.statusText || 'Something went wrong';
+      const error = new Error(message);
       error.type = data.type || 'GENERAL_ERROR';
       error.response = { data };
       throw error;
@@ -69,6 +81,37 @@ class ApiService {
       });
       throw error;
     }
+  }
+
+  // HTTP method helpers
+  async get(endpoint, options = {}) {
+    return this.request(endpoint, {
+      method: 'GET',
+      ...options
+    });
+  }
+
+  async post(endpoint, data, options = {}) {
+    return this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      ...options
+    });
+  }
+
+  async put(endpoint, data, options = {}) {
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      ...options
+    });
+  }
+
+  async delete(endpoint, options = {}) {
+    return this.request(endpoint, {
+      method: 'DELETE',
+      ...options
+    });
   }
 
   // Authentication methods
@@ -298,4 +341,4 @@ class ApiService {
 
 // Create and export a singleton instance
 const apiService = new ApiService();
-export default apiService; 
+export default apiService;

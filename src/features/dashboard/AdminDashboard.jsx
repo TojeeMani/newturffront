@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { DashboardHeader } from '../../components/layout';
+import { Navigation } from '../../components/layout';
 import { TableRowSkeleton, CardSkeleton, LoadingSpinner } from '../../components/ui';
 import apiService from '../../services/api';
 import { showSuccessToast, showConfirmToast, showInputToast } from '../../utils/toast';
@@ -38,6 +38,8 @@ const AdminDashboard = () => {
   const [turfsPage, setTurfsPage] = useState(1);
   const [turfsTotalPages, setTurfsTotalPages] = useState(1);
   const [activeTab, setActiveTab] = useState('owners');
+  const [pendingTurfChanges, setPendingTurfChanges] = useState([]);
+  const [turfChangesLoading, setTurfChangesLoading] = useState(false);
 
   // Document viewer state
   const [documentViewer, setDocumentViewer] = useState({
@@ -57,6 +59,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (activeTab === 'turfs') {
       fetchAllTurfs();
+    } else if (activeTab === 'changes') {
+      fetchPendingTurfChanges();
     }
   }, [turfsPage, activeTab]);
 
@@ -122,6 +126,39 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchPendingTurfChanges = async () => {
+    try {
+      setTurfChangesLoading(true);
+      const response = await apiService.request('/admin/turfs/pending-changes');
+
+      if (response.success) {
+        setPendingTurfChanges(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching pending turf changes:', error);
+      showErrorToast('Failed to fetch pending turf changes');
+    } finally {
+      setTurfChangesLoading(false);
+    }
+  };
+
+  const approveTurfChanges = async (turfId, status, notes = '') => {
+    try {
+      const response = await apiService.request(`/admin/turfs/${turfId}/approve-changes`, {
+        method: 'PUT',
+        body: JSON.stringify({ status, notes })
+      });
+
+      if (response.success) {
+        showSuccessToast(`Turf changes ${status} successfully!`);
+        fetchPendingTurfChanges(); // Refresh the list
+      }
+    } catch (error) {
+      console.error('Error approving turf changes:', error);
+      showErrorToast('Failed to process turf changes');
+    }
+  };
+
   // Document viewer functions
   const openDocumentViewer = (documentUrl, documentName, documentType, ownerName) => {
     setDocumentViewer({
@@ -153,8 +190,8 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      <DashboardHeader title="System Administration" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+      <Navigation />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-20">
         {/* Welcome Message */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -207,6 +244,24 @@ const AdminDashboard = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                   <span>All Turfs</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('changes')}
+                className={`flex-1 py-3 px-6 rounded-lg font-medium transition-all ${
+                  activeTab === 'changes'
+                    ? 'bg-primary-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-primary-600 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <ClockIcon className="w-5 h-5" />
+                  <span>Pending Changes</span>
+                  {pendingTurfChanges.length > 0 && (
+                    <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 ml-1">
+                      {pendingTurfChanges.length}
+                    </span>
+                  )}
                 </div>
               </button>
             </div>
@@ -399,7 +454,7 @@ const AdminDashboard = () => {
                                 {owner.businessName || 'Business name not provided'}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {owner.turfLocation || 'Location not specified'} • {owner.turfCount || 'Turf count not specified'}
+                                {owner.turfLocation || 'Location not specified'} • {owner.turfCount || 'Turf count not specified'} • {owner.sportType || 'Sport not specified'}
                               </p>
                             </div>
                           </div>
@@ -467,6 +522,13 @@ const AdminDashboard = () => {
                                 <div>
                                   <p className="text-sm font-medium text-gray-700">Number of Turfs</p>
                                   <p className="text-sm text-gray-600">{owner.turfCount || 'Not specified'}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                <span className="text-gray-400">⚽</span>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-700">Sport Type</p>
+                                  <p className="text-sm text-gray-600">{owner.sportType || 'Not specified'}</p>
                                 </div>
                               </div>
                             </div>
@@ -959,6 +1021,12 @@ const AdminDashboard = () => {
                           <span>{owner.turfCount ? '✅' : '❌'}</span>
                           <span>Turf Count</span>
                         </div>
+                        <div className={`flex items-center space-x-2 text-xs ${
+                          owner.sportType ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          <span>{owner.sportType ? '✅' : '❌'}</span>
+                          <span>Sport Type</span>
+                        </div>
                       </div>
                     </div>
                     )}
@@ -1213,6 +1281,86 @@ const AdminDashboard = () => {
               )}
             </motion.div>
           </>
+        )}
+
+        {/* Pending Changes Tab Content */}
+        {activeTab === 'changes' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-2xl shadow-xl p-6"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">Pending Turf Changes</h2>
+              <button
+                onClick={fetchPendingTurfChanges}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Refresh
+              </button>
+            </div>
+
+            {turfChangesLoading ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : pendingTurfChanges.length === 0 ? (
+              <div className="text-center py-8">
+                <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No pending turf changes</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {pendingTurfChanges.map((turf) => (
+                  <div key={turf._id} className="border border-gray-200 rounded-lg p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          {turf.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                          Owner: {turf.ownerId?.firstName} {turf.ownerId?.lastName} ({turf.ownerId?.email})
+                        </p>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Business: {turf.ownerId?.businessName}
+                        </p>
+
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                          <h4 className="font-medium text-yellow-800 mb-2">Pending Changes:</h4>
+                          <div className="space-y-2">
+                            {Array.from(turf.pendingChanges.entries()).map(([key, value]) => (
+                              <div key={key} className="text-sm">
+                                <span className="font-medium text-yellow-700">{key}:</span>
+                                <span className="text-yellow-600 ml-2">
+                                  {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex space-x-2 ml-4">
+                        <button
+                          onClick={() => approveTurfChanges(turf._id, 'approved')}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => approveTurfChanges(turf._id, 'rejected', 'Changes rejected by admin')}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
         )}
       </div>
 

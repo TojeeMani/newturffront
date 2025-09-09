@@ -2,8 +2,10 @@ import React, { useState, useRef } from 'react';
 import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import apiService from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const ProfileImageUpload = ({ currentImage, onImageChange, loading = false }) => {
+  const { updateProfile } = useAuth();
   const [dragActive, setDragActive] = useState(false);
   const [preview, setPreview] = useState(currentImage || null);
   const [uploading, setUploading] = useState(false);
@@ -135,8 +137,27 @@ const ProfileImageUpload = ({ currentImage, onImageChange, loading = false }) =>
       const uploadResult = await uploadToBackend(resizedFile);
 
       // Call parent callback with the uploaded image URL
+      console.log('🖼️ ProfileImageUpload - Upload successful:', uploadResult.secure_url);
       onImageChange(uploadResult.secure_url);
-      
+
+      // Immediately save the profile picture to the database
+      try {
+        console.log('🔄 ProfileImageUpload - Saving profile picture to database:', uploadResult.secure_url);
+        const updateResult = await updateProfile({ avatar: uploadResult.secure_url });
+        console.log('✅ ProfileImageUpload - Profile picture saved to database:', updateResult);
+        
+        // Verify the user state was updated
+        if (updateResult.success && updateResult.user) {
+          console.log('✅ ProfileImageUpload - User state updated with new avatar:', updateResult.user.avatar);
+        } else {
+          console.warn('⚠️ ProfileImageUpload - Update result missing user data:', updateResult);
+        }
+      } catch (error) {
+        console.error('❌ ProfileImageUpload - Failed to save profile picture to database:', error);
+        // Don't show error toast to user since image upload was successful
+        // The profile picture will still be saved when the form is submitted
+      }
+
       toast.success('Profile picture updated successfully!');
     } catch (error) {
       console.error('Image upload error:', error);
@@ -147,11 +168,29 @@ const ProfileImageUpload = ({ currentImage, onImageChange, loading = false }) =>
     }
   };
 
-  const removeImage = () => {
+  const removeImage = async () => {
     setPreview(null);
     onImageChange(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+
+    // Immediately save the profile picture removal to the database
+    try {
+      console.log('🔄 ProfileImageUpload - Saving profile picture removal to database');
+      const updateResult = await updateProfile({ avatar: '' });
+      console.log('✅ ProfileImageUpload - Profile picture removal saved to database:', updateResult);
+      
+      // Verify the user state was updated
+      if (updateResult.success && updateResult.user) {
+        console.log('✅ ProfileImageUpload - User state updated with removed avatar:', updateResult.user.avatar);
+      } else {
+        console.warn('⚠️ ProfileImageUpload - Update result missing user data:', updateResult);
+      }
+    } catch (error) {
+      console.error('❌ ProfileImageUpload - Failed to save profile picture removal to database:', error);
+      // Don't show error toast to user since this is just a removal
+      // The removal will still be saved when the form is submitted
     }
   };
 
