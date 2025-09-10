@@ -15,12 +15,98 @@ const OwnerBookingsPage = () => {
     const pad = (n) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   };
+  
+  const getMaxAllowedDate = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 5); // Add 5 days to current date
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+  
   const todayYmd = getTodayYmd();
+  const maxAllowedDate = getMaxAllowedDate();
   const [selectedDate, setSelectedDate] = useState(todayYmd);
+  
+  const handleDateChange = (newDate) => {
+    if (newDate >= todayYmd && newDate <= maxAllowedDate) {
+      setSelectedDate(newDate);
+    } else {
+      setError('You can only allocate turfs for the next 5 days from today');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleAllocateSlots = async () => {
+    try {
+      if (!allocationData.slots.length) {
+        setError('Please add at least one slot');
+        return;
+      }
+      
+      if (allocationData.date < todayYmd || allocationData.date > maxAllowedDate) {
+        setError('Selected date is outside the allowed allocation period');
+        return;
+      }
+
+      await turfService.allocateSlotsForDay(selectedTurf, allocationData);
+      setSuccess('Slots allocated successfully for the selected day');
+      setTimeout(() => setSuccess(''), 3000);
+      setShowAllocateSlotsModal(false);
+      setAllocationData({ date: todayYmd, slots: [] });
+      await loadBookings();
+    } catch (e) {
+      setError(e.message || 'Failed to allocate slots');
+    }
+  };
+
+  const addSlotToAllocation = () => {
+    const startTime = document.getElementById('allocation-start-time')?.value;
+    const endTime = document.getElementById('allocation-end-time')?.value;
+    const price = document.getElementById('allocation-price')?.value;
+
+    if (!startTime || !endTime || !price) {
+      setError('Please fill in all slot details');
+      return;
+    }
+
+    if (startTime >= endTime) {
+      setError('End time must be after start time');
+      return;
+    }
+
+    const newSlot = {
+      startTime,
+      endTime,
+      price: parseInt(price)
+    };
+
+    setAllocationData(prev => ({
+      ...prev,
+      slots: [...prev.slots, newSlot]
+    }));
+
+    // Clear form
+    document.getElementById('allocation-start-time').value = '';
+    document.getElementById('allocation-end-time').value = '';
+    document.getElementById('allocation-price').value = '';
+    setError('');
+  };
+
+  const removeSlotFromAllocation = (index) => {
+    setAllocationData(prev => ({
+      ...prev,
+      slots: prev.slots.filter((_, i) => i !== index)
+    }));
+  };
   const [showAddBookingModal, setShowAddBookingModal] = useState(false);
+  const [showAllocateSlotsModal, setShowAllocateSlotsModal] = useState(false);
   const [availableSlots, setAvailableSlots] = useState([]); // normalized display strings
   const [availableSlotsRaw, setAvailableSlotsRaw] = useState([]); // [{startTime,endTime,price}]
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(0);
+  const [allocationData, setAllocationData] = useState({
+    date: todayYmd,
+    slots: []
+  });
   const [offlineCustomer, setOfflineCustomer] = useState({ name: '', phone: '' });
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [customerEmail, setCustomerEmail] = useState('');
@@ -193,8 +279,18 @@ const OwnerBookingsPage = () => {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Booking Management</h1>
               <p className="text-gray-600 dark:text-gray-400">Verify codes by scanning QR or entering manually.</p>
+              <div className="mt-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <strong>Allocation Period:</strong> You can only allocate turfs for the next 5 days from today ({new Date(todayYmd).toLocaleDateString()} to {new Date(maxAllowedDate).toLocaleDateString()})
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setAllocationData({ date: todayYmd, slots: [] }); setShowAllocateSlotsModal(true); }}
+                className={`inline-flex items-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white`}>
+                <Plus className="h-4 w-4 mr-2" /> Allocate Slots
+              </button>
               <button
                 onClick={() => { setSelectedDate(getTodayYmd()); setShowAddBookingModal(true); }}
                 className={`inline-flex items-center px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white`}>
@@ -212,7 +308,12 @@ const OwnerBookingsPage = () => {
           <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Date</label>
-              <input type="date" value={selectedDate} onChange={(e)=> setSelectedDate(e.target.value)} className="w-full px-3 py-2 border rounded" />
+              <input 
+                type="date" 
+                value={selectedDate} 
+                onChange={(e)=> setSelectedDate(e.target.value)} 
+                className="w-full px-3 py-2 border rounded" 
+              />
             </div>
             <div>
               <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Status</label>
@@ -308,8 +409,15 @@ const OwnerBookingsPage = () => {
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Booking Date</label>
-                <input type="date" value={selectedDate} disabled className="w-full px-3 py-2 border rounded bg-gray-100 text-gray-700 cursor-not-allowed" />
-                <p className="text-xs text-gray-500 mt-1">Offline booking is allowed only for today's date.</p>
+                <input 
+                  type="date" 
+                  value={selectedDate} 
+                  min={todayYmd}
+                  max={maxAllowedDate}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  className="w-full px-3 py-2 border rounded" 
+                />
+                <p className="text-xs text-gray-500 mt-1">You can only allocate turfs for the next 5 days from today.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Allocated Slot</label>
@@ -365,6 +473,7 @@ const OwnerBookingsPage = () => {
                     try {
                       if (!availableSlotsRaw.length || selectedSlotIndex < 0) return setError('Select an allocated slot');
                       if (!offlineCustomer.name || !offlineCustomer.phone) return setError('Enter customer name and phone');
+                      if (selectedDate < todayYmd || selectedDate > maxAllowedDate) return setError('Selected date is outside the allowed allocation period');
                       const sel = availableSlotsRaw[selectedSlotIndex];
                       const startTime = sel.startTime;
                       const endTime = sel.endTime;
@@ -388,6 +497,108 @@ const OwnerBookingsPage = () => {
                   }}
                   className="px-3 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700">
                   Add Booking
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAllocateSlotsModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold">Allocate Slots for Day</h3>
+              <button onClick={() => setShowAllocateSlotsModal(false)} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium mb-2">Select Date</label>
+                <input 
+                  type="date" 
+                  value={allocationData.date} 
+                  min={todayYmd}
+                  max={maxAllowedDate}
+                  onChange={(e) => setAllocationData(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded" 
+                />
+                <p className="text-xs text-gray-500 mt-1">You can only allocate slots for the next 5 days from today.</p>
+              </div>
+
+              <div className="border rounded-lg p-4">
+                <h4 className="font-medium mb-3">Add Slots</h4>
+                <div className="grid grid-cols-3 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Start Time</label>
+                    <input 
+                      id="allocation-start-time"
+                      type="time" 
+                      className="w-full px-2 py-1 border rounded text-sm" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">End Time</label>
+                    <input 
+                      id="allocation-end-time"
+                      type="time" 
+                      className="w-full px-2 py-1 border rounded text-sm" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Price (₹)</label>
+                    <input 
+                      id="allocation-price"
+                      type="number" 
+                      min="0"
+                      className="w-full px-2 py-1 border rounded text-sm" 
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={addSlotToAllocation}
+                  className="w-full px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                >
+                  Add Slot
+                </button>
+              </div>
+
+              {allocationData.slots.length > 0 && (
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium mb-3">Allocated Slots</h4>
+                  <div className="space-y-2">
+                    {allocationData.slots.map((slot, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm font-medium">{slot.startTime} - {slot.endTime}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">₹{slot.price}</span>
+                        </div>
+                        <button 
+                          onClick={() => removeSlotFromAllocation(index)}
+                          className="text-red-600 hover:text-red-800 p-1"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button 
+                  onClick={() => setShowAllocateSlotsModal(false)} 
+                  className="px-4 py-2 rounded border hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAllocateSlots}
+                  className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Allocate Slots
                 </button>
               </div>
             </div>
