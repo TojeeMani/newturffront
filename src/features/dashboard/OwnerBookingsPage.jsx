@@ -74,16 +74,45 @@ const OwnerBookingsPage = () => {
       return;
     }
 
-    const newSlot = {
-      startTime,
-      endTime,
-      price: parseInt(price)
+    const toMinutes = (t) => {
+      const [h, m] = String(t || '').split(':').map(Number);
+      return (isNaN(h) || isNaN(m)) ? NaN : (h * 60 + m);
     };
 
-    setAllocationData(prev => ({
-      ...prev,
-      slots: [...prev.slots, newSlot]
-    }));
+    // Prevent duplicates and overlaps within the UI list
+    const overlaps = (aStart, aEnd, bStart, bEnd) => {
+      const s1 = toMinutes(aStart); const e1 = toMinutes(aEnd);
+      const s2 = toMinutes(bStart); const e2 = toMinutes(bEnd);
+      if ([s1,e1,s2,e2].some(Number.isNaN)) return false;
+      return Math.max(s1, s2) < Math.min(e1, e2);
+    };
+
+    // If allocating for today, do not allow past-ended slots
+    const now = new Date();
+    const allocDate = new Date(allocationData.date);
+    if (now.toDateString() === allocDate.toDateString()) {
+      const endMinutes = toMinutes(endTime);
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      if (!Number.isNaN(endMinutes) && endMinutes <= nowMinutes) {
+        setError('Cannot add slots that already ended today');
+        return;
+      }
+    }
+
+    const hasDuplicate = allocationData.slots.some(s => s.startTime === startTime && s.endTime === endTime);
+    if (hasDuplicate) {
+      setError('This slot is already added');
+      return;
+    }
+    const hasOverlap = allocationData.slots.some(s => overlaps(s.startTime, s.endTime, startTime, endTime));
+    if (hasOverlap) {
+      setError('This slot overlaps an existing one');
+      return;
+    }
+
+    const newSlot = { startTime, endTime, price: parseInt(price) };
+
+    setAllocationData(prev => ({ ...prev, slots: [...prev.slots, newSlot] }));
 
     // Clear form
     document.getElementById('allocation-start-time').value = '';
@@ -164,7 +193,18 @@ const OwnerBookingsPage = () => {
       try {
         const res = await turfService.getAvailableSlots(selectedTurf, selectedDate);
         const list = res?.data?.slots || res?.slots || res || [];
-        const raw = Array.isArray(list) ? list.filter(s => s && s.startTime && s.endTime) : [];
+        const now = new Date();
+        const selDate = new Date(selectedDate);
+        const toMinutes = (t) => { const [h,m] = String(t||'').split(':').map(Number); return (isNaN(h)||isNaN(m))?NaN:(h*60+m); };
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const isToday = now.toDateString() === selDate.toDateString();
+        // Filter out slots that already ended if viewing today
+        const raw = Array.isArray(list) ? list.filter(s => {
+          if (!s || !s.startTime || !s.endTime) return false;
+          if (!isToday) return true;
+          const endM = toMinutes(s.endTime);
+          return Number.isNaN(endM) ? true : endM > nowMinutes;
+        }) : [];
         const normalized = raw.map(s => `${s.startTime} - ${s.endTime} (₹${s.price ?? ''})`);
         setAvailableSlotsRaw(raw);
         setAvailableSlots(normalized);
@@ -175,6 +215,24 @@ const OwnerBookingsPage = () => {
     };
     fetchSlots();
   }, [showAddBookingModal, selectedTurf, selectedDate]);
+
+  // Preload previously allocated slots in Allocate modal for selected date
+  useEffect(() => {
+    const loadAllocatedForDate = async () => {
+      if (!showAllocateSlotsModal || !selectedTurf || !allocationData.date) return;
+      try {
+        const res = await turfService.getAvailableSlots(selectedTurf, allocationData.date);
+        const list = res?.data?.slots || res?.slots || [];
+        // Populate list with current allocations that are not booked for that date
+        const sanitized = Array.isArray(list) ? list.filter(s => s && s.startTime && s.endTime) : [];
+        setAllocationData(prev => ({
+          ...prev,
+          slots: sanitized.map(s => ({ startTime: s.startTime, endTime: s.endTime, price: s.price }))
+        }));
+      } catch {}
+    };
+    loadAllocatedForDate();
+  }, [showAllocateSlotsModal, selectedTurf, allocationData.date]);
 
   const getStatusColor = (status) => {
     switch (status) {

@@ -191,6 +191,19 @@ class TurfService {
     }
   }
 
+  // Allocate slots for a specific day (private/owner)
+  async allocateSlotsForDay(turfId, allocation) {
+    try {
+      const response = await api.request(`/turfs/${turfId}/slots/allocate`, {
+        method: 'POST',
+        body: JSON.stringify(allocation)
+      });
+      return response;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Cancel a slot booking
   async cancelSlotBooking(turfId, date, startTime, endTime) {
     try {
