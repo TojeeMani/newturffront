@@ -141,6 +141,14 @@ const OwnerBookingsPage = () => {
   const [customerEmail, setCustomerEmail] = useState('');
   const [notes, setNotes] = useState('');
   const [priceOverride, setPriceOverride] = useState('');
+  
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    price: ''
+  });
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -153,6 +161,90 @@ const OwnerBookingsPage = () => {
   const [scanError, setScanError] = useState('');
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+
+  // Validation functions
+  const validateName = (name) => {
+    if (!name.trim()) {
+      return 'Name is required';
+    }
+    if (name.trim().length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    return '';
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone.trim()) {
+      return 'Phone number is required';
+    }
+    // Remove any non-digit characters
+    const digitsOnly = phone.replace(/\D/g, '');
+    if (digitsOnly.length !== 10) {
+      return 'Phone number must be exactly 10 digits';
+    }
+    if (phone !== digitsOnly) {
+      return 'Phone number should contain only digits';
+    }
+    return '';
+  };
+
+  const validateEmail = (email) => {
+    if (!email.trim()) {
+      return ''; // Email is optional
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return 'Please enter a valid email address';
+    }
+    return '';
+  };
+
+  const validatePrice = (price) => {
+    if (!price.trim()) {
+      return ''; // Price is optional
+    }
+    const numPrice = parseFloat(price);
+    if (isNaN(numPrice) || numPrice < 0) {
+      return 'Price must be a positive number';
+    }
+    return '';
+  };
+
+  const validateField = (field, value) => {
+    let error = '';
+    switch (field) {
+      case 'name':
+        error = validateName(value);
+        break;
+      case 'phone':
+        error = validatePhone(value);
+        break;
+      case 'email':
+        error = validateEmail(value);
+        break;
+      case 'price':
+        error = validatePrice(value);
+        break;
+      default:
+        break;
+    }
+    
+    setValidationErrors(prev => ({
+      ...prev,
+      [field]: error
+    }));
+    
+    return error === '';
+  };
+
+  const validateAllFields = () => {
+    const nameValid = validateField('name', offlineCustomer.name);
+    const phoneValid = validateField('phone', offlineCustomer.phone);
+    const emailValid = validateField('email', customerEmail);
+    const priceValid = validateField('price', priceOverride);
+    
+    return nameValid && phoneValid && emailValid && priceValid;
+  };
 
   const loadBookings = async () => {
     try {
@@ -461,7 +553,11 @@ const OwnerBookingsPage = () => {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Add Offline Booking</h3>
-              <button onClick={() => setShowAddBookingModal(false)} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+              <button onClick={() => {
+                setShowAddBookingModal(false);
+                // Reset validation errors when closing modal
+                setValidationErrors({ name: '', phone: '', email: '', price: '' });
+              }} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
             </div>
 
             <div className="space-y-3">
@@ -491,22 +587,87 @@ const OwnerBookingsPage = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1">Customer Name</label>
-                  <input value={offlineCustomer.name} onChange={(e)=> setOfflineCustomer({ ...offlineCustomer, name: e.target.value })} className="w-full px-3 py-2 border rounded" placeholder="Name" />
+                  <input 
+                    value={offlineCustomer.name} 
+                    onChange={(e) => {
+                      setOfflineCustomer({ ...offlineCustomer, name: e.target.value });
+                      validateField('name', e.target.value);
+                    }} 
+                    className={`w-full px-3 py-2 border rounded ${
+                      validationErrors.name ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                    }`} 
+                    placeholder="Name" 
+                  />
+                  {validationErrors.name && (
+                    <p className="text-xs text-red-500 mt-1">{validationErrors.name}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Phone</label>
-                  <input value={offlineCustomer.phone} onChange={(e)=> setOfflineCustomer({ ...offlineCustomer, phone: e.target.value })} className="w-full px-3 py-2 border rounded" placeholder="Phone" />
+                  <input 
+                    value={offlineCustomer.phone} 
+                    onChange={(e) => {
+                      // Block alphabets and non-numeric characters
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      setOfflineCustomer({ ...offlineCustomer, phone: value });
+                      validateField('phone', value);
+                    }} 
+                    onKeyDown={(e) => {
+                      // Block alphabets and special characters on key press
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded ${
+                      validationErrors.phone ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                    }`} 
+                    placeholder="Phone" 
+                    maxLength={10}
+                    inputMode="numeric"
+                  />
+                  {validationErrors.phone && (
+                    <p className="text-xs text-red-500 mt-1">{validationErrors.phone}</p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium mb-1">Email (optional)</label>
-                  <input value={customerEmail} onChange={(e)=> setCustomerEmail(e.target.value)} className="w-full px-3 py-2 border rounded" placeholder="Email" />
+                  <input 
+                    value={customerEmail} 
+                    onChange={(e) => {
+                      setCustomerEmail(e.target.value);
+                      validateField('email', e.target.value);
+                    }} 
+                    className={`w-full px-3 py-2 border rounded ${
+                      validationErrors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                    }`} 
+                    placeholder="Email" 
+                    type="email"
+                  />
+                  {validationErrors.email && (
+                    <p className="text-xs text-red-500 mt-1">{validationErrors.email}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Price (optional)</label>
-                  <input type="number" min={0} value={priceOverride} onChange={(e)=> setPriceOverride(e.target.value)} className="w-full px-3 py-2 border rounded" placeholder={`Default ₹${availableSlotsRaw[selectedSlotIndex]?.price ?? ''}`} />
+                  <input 
+                    type="number" 
+                    min={0} 
+                    value={priceOverride} 
+                    onChange={(e) => {
+                      setPriceOverride(e.target.value);
+                      validateField('price', e.target.value);
+                    }} 
+                    className={`w-full px-3 py-2 border rounded ${
+                      validationErrors.price ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+                    }`} 
+                    placeholder={`Default ₹${availableSlotsRaw[selectedSlotIndex]?.price ?? ''}`} 
+                  />
+                  {validationErrors.price && (
+                    <p className="text-xs text-red-500 mt-1">{validationErrors.price}</p>
+                  )}
                 </div>
               </div>
 
@@ -525,13 +686,23 @@ const OwnerBookingsPage = () => {
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <button onClick={() => setShowAddBookingModal(false)} className="px-3 py-2 rounded border">Cancel</button>
+                <button onClick={() => {
+                  setShowAddBookingModal(false);
+                  // Reset validation errors when canceling
+                  setValidationErrors({ name: '', phone: '', email: '', price: '' });
+                }} className="px-3 py-2 rounded border">Cancel</button>
                 <button
                   onClick={async () => {
                     try {
+                      // Validate all fields first
+                      if (!validateAllFields()) {
+                        setError('Please fix the validation errors before submitting');
+                        return;
+                      }
+                      
                       if (!availableSlotsRaw.length || selectedSlotIndex < 0) return setError('Select an allocated slot');
-                      if (!offlineCustomer.name || !offlineCustomer.phone) return setError('Enter customer name and phone');
                       if (selectedDate < todayYmd || selectedDate > maxAllowedDate) return setError('Selected date is outside the allowed allocation period');
+                      
                       const sel = availableSlotsRaw[selectedSlotIndex];
                       const startTime = sel.startTime;
                       const endTime = sel.endTime;
@@ -539,15 +710,21 @@ const OwnerBookingsPage = () => {
                         date: selectedDate,
                         startTime,
                         endTime,
-                        customerName: offlineCustomer.name,
-                        customerPhone: offlineCustomer.phone,
-                        customerEmail: customerEmail,
-                        notes: notes,
+                        customerName: offlineCustomer.name.trim(),
+                        customerPhone: offlineCustomer.phone.trim(),
+                        customerEmail: customerEmail.trim() || undefined,
+                        notes: notes.trim() || undefined,
                         price: priceOverride ? Number(priceOverride) : undefined
                       });
                       setSuccess('Offline booking added');
                       setTimeout(() => setSuccess(''), 1500);
                       setShowAddBookingModal(false);
+                      // Reset form and validation errors
+                      setOfflineCustomer({ name: '', phone: '' });
+                      setCustomerEmail('');
+                      setNotes('');
+                      setPriceOverride('');
+                      setValidationErrors({ name: '', phone: '', email: '', price: '' });
                       await loadBookings();
                     } catch (e) {
                       setError(e.message || 'Failed to add booking');

@@ -239,6 +239,28 @@ class TurfService {
     }
   }
 
+  // Get owner analytics data
+  async getOwnerAnalytics(period = '30d') {
+    try {
+      const response = await api.request(`/turfs/owner/analytics?period=${period}`);
+      return response;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Get owner customers data
+  async getOwnerCustomers(filters = {}) {
+    try {
+      const queryString = new URLSearchParams(filters).toString();
+      const endpoint = queryString ? `/turfs/owner/customers?${queryString}` : '/turfs/owner/customers';
+      const response = await api.request(endpoint);
+      return response;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Handle API errors
   handleError(error) {
     if (error.response) {

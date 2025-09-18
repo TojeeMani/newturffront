@@ -12,7 +12,7 @@ const MOCK_EXISTING_EMAILS = [
 // Validation patterns
 export const VALIDATION_PATTERNS = {
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  phone: /^[6-9]\d{9}$/,
+  phone: /^\d{10}$/,
   password: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
   name: /^[a-zA-Z\s]{2,50}$/,
   businessName: /^[a-zA-Z0-9\s&.-]{2,100}$/,
@@ -24,7 +24,7 @@ export const VALIDATION_MESSAGES = {
   required: (field) => `${field} is required`,
   email: 'Please enter a valid email address',
   emailExists: 'This email is already registered',
-  phone: 'Please enter a valid 10-digit mobile number',
+  phone: 'Please enter exactly 10 digits (numbers only)',
   password: 'Password must be at least 8 characters with uppercase, lowercase, number and special character',
   passwordMatch: 'Passwords do not match',
   name: 'Name must be 2-50 characters and contain only letters',
@@ -50,7 +50,7 @@ export const validators = {
 
   phone: (value) => {
     if (!value) return true; // Allow empty for optional fields
-    return VALIDATION_PATTERNS.phone.test(value.replace(/\s+/g, ''));
+    return VALIDATION_PATTERNS.phone.test(value);
   },
 
   password: (value) => {

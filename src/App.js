@@ -22,6 +22,8 @@ const PlayerDashboard = React.lazy(() => import('./features/dashboard/PlayerDash
 const OwnerDashboard = React.lazy(() => import('./features/dashboard/OwnerDashboard'));
 const OwnerTurfsPage = React.lazy(() => import('./features/dashboard/OwnerTurfsPage'));
 const OwnerBookingsPage = React.lazy(() => import('./features/dashboard/OwnerBookingsPage'));
+const OwnerAnalyticsPage = React.lazy(() => import('./features/dashboard/OwnerAnalyticsPage'));
+const OwnerCustomersPage = React.lazy(() => import('./features/dashboard/OwnerCustomersPage'));
 const AdminDashboard = React.lazy(() => import('./features/dashboard/AdminDashboard'));
 const ProfileSettings = React.lazy(() => import('./features/profile/ProfileSettings'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
@@ -203,6 +205,22 @@ function App() {
                 element={
                   <ProtectedRoute requireAuth={true} requiredRole="owner">
                     <OwnerBookingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/owner-dashboard/analytics"
+                element={
+                  <ProtectedRoute requireAuth={true} requiredRole="owner">
+                    <OwnerAnalyticsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/owner-dashboard/customers"
+                element={
+                  <ProtectedRoute requireAuth={true} requiredRole="owner">
+                    <OwnerCustomersPage />
                   </ProtectedRoute>
                 }
               />

@@ -145,6 +145,15 @@ const ValidatedInput = ({
   };
 
   const handleInputChange = (e) => {
+    let value = e.target.value;
+    
+    // Block alphabets and non-numeric characters for phone fields
+    if (type === 'tel' || name === 'phone' || name === 'businessPhone') {
+      value = value.replace(/[^0-9]/g, '');
+      // Update the event object with the filtered value
+      e.target.value = value;
+    }
+    
     onChange(e);
 
     // Reset email status when user types (only if email actually changed)
@@ -166,6 +175,15 @@ const ValidatedInput = ({
 
   const handleInputFocus = () => {
     setIsFocused(true);
+  };
+
+  const handleKeyDown = (e) => {
+    // Block alphabets and special characters for phone fields
+    if (type === 'tel' || name === 'phone' || name === 'businessPhone') {
+      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+      }
+    }
   };
 
   const togglePasswordVisibility = () => {
@@ -237,8 +255,11 @@ const ValidatedInput = ({
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           onFocus={handleInputFocus}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
+          inputMode={type === 'tel' || name === 'phone' || name === 'businessPhone' ? 'numeric' : undefined}
+          maxLength={type === 'tel' || name === 'phone' || name === 'businessPhone' ? 10 : undefined}
           className={`
             block w-full px-3 py-2 pr-10 border rounded-md shadow-sm 
             placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
