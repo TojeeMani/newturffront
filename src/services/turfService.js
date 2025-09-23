@@ -13,6 +13,38 @@ class TurfService {
     }
   }
 
+  // Reviews
+  async getTurfReviews(turfId) {
+    try {
+      return await api.request(`/turfs/${turfId}/reviews`);
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async canReviewTurf(turfId) {
+    try {
+      const res = await api.request(`/turfs/${turfId}/reviews/can`);
+      const data = res?.data || res;
+      return data?.data?.eligible ?? false;
+    } catch (error) {
+      // If unauthorized or no booking, treat as not eligible
+      return false;
+    }
+  }
+
+  async createReview(turfId, { rating, comment }) {
+    try {
+      const res = await api.request(`/turfs/${turfId}/reviews`, {
+        method: 'POST',
+        body: JSON.stringify({ rating, comment })
+      });
+      return res;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Get single turf (public)
   async getTurf(id) {
     try {
