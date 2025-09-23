@@ -10,7 +10,7 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
-const MatchCard = ({ match, onStartMatch, onPauseMatch, onCompleteMatch, onShare }) => {
+const MatchCard = ({ match, onStartMatch, onPauseMatch, onCompleteMatch, onShare, onOpenControl }) => {
   const formatTime = (date) => {
     return new Date(date).toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -145,6 +145,14 @@ const MatchCard = ({ match, onStartMatch, onPauseMatch, onCompleteMatch, onShare
                 Complete
               </button>
             </>
+          )}
+          {(match.status === 'scheduled' || match.status === 'live') && onOpenControl && (
+            <button
+              onClick={() => onOpenControl(match)}
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Open Control
+            </button>
           )}
         </div>
         

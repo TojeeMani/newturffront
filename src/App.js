@@ -24,6 +24,7 @@ const OwnerTurfsPage = React.lazy(() => import('./features/dashboard/OwnerTurfsP
 const OwnerBookingsPage = React.lazy(() => import('./features/dashboard/OwnerBookingsPage'));
 const OwnerAnalyticsPage = React.lazy(() => import('./features/dashboard/OwnerAnalyticsPage'));
 const OwnerCustomersPage = React.lazy(() => import('./features/dashboard/OwnerCustomersPage'));
+const OwnerMatchesPage = React.lazy(() => import('./features/matches/MatchManagement'));
 const AdminDashboard = React.lazy(() => import('./features/dashboard/AdminDashboard'));
 const ProfileSettings = React.lazy(() => import('./features/profile/ProfileSettings'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
@@ -31,6 +32,8 @@ const AddTurf = React.lazy(() => import('./features/turfs/AddTurf'));
 const TurfDetails = React.lazy(() => import('./features/turfs/TurfDetails'));
 const EditTurf = React.lazy(() => import('./features/turfs/EditTurf'));
 const MyBookings = React.lazy(() => import('./features/bookings/MyBookings'));
+const MyMatches = React.lazy(() => import('./pages/MyMatches'));
+const PublicMatchViewer = React.lazy(() => import('./pages/PublicMatchViewer'));
 
 // Custom Loading component for Suspense
 const SuspenseLoader = () => (
@@ -137,6 +140,10 @@ function App() {
             <Routes>
               <Route path="/" element={<Layout><Home /></Layout>} />
               <Route
+                path="/match/:shareCode"
+                element={<PublicMatchViewer />}
+              />
+              <Route
                 path="/login"
                 element={
                   <ProtectedRoute requireAuth={false}>
@@ -193,6 +200,14 @@ function App() {
                 }
               />
               <Route
+                path="/matches/my"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <Layout><MyMatches /></Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/owner-dashboard"
                 element={
                   <ProtectedRoute requireAuth={true} requiredRole="owner">
@@ -213,6 +228,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAuth={true} requiredRole="owner">
                     <OwnerAnalyticsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/owner-dashboard/matches"
+                element={
+                  <ProtectedRoute requireAuth={true} requiredRole="owner">
+                    <OwnerMatchesPage />
                   </ProtectedRoute>
                 }
               />

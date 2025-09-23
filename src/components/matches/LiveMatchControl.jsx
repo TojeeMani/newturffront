@@ -129,7 +129,7 @@ const LiveMatchControl = ({ match, onUpdate }) => {
         
         await matchService.updateMatchStatistics(match._id, {
           [statType]: {
-            ...currentStats[statType],
+            ...(currentStats[statType] || {}),
             [teamKey]: newValue
           }
         });
@@ -139,6 +139,22 @@ const LiveMatchControl = ({ match, onUpdate }) => {
       showSuccessToast('Statistics updated successfully');
     } catch (error) {
       showErrorToast('Failed to update statistics');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleOversUpdate = async (change) => {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    try {
+      const currentStats = match.statistics || {};
+      const newOvers = Math.max(0, (currentStats.overs || 0) + change);
+      await matchService.updateMatchStatistics(match._id, { overs: newOvers });
+      onUpdate();
+      showSuccessToast('Overs updated successfully');
+    } catch (error) {
+      showErrorToast('Failed to update overs');
     } finally {
       setIsUpdating(false);
     }
@@ -204,44 +220,81 @@ const LiveMatchControl = ({ match, onUpdate }) => {
         </div>
       </div>
 
-      {/* Statistics */}
-      {currentMatchType.stats.includes('possession') && (
+      {/* Statistics - Football */}
+      {match.matchType === 'football' && (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Possession</h3>
-          <div className="bg-gray-50 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Football Analytics</h3>
+          {/* Possession */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">{match.teams[0]?.name}</span>
               <span className="text-sm font-medium text-gray-700">{match.teams[1]?.name}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <button
-                onClick={() => handleStatisticsUpdate('possession', 0, -5)}
-                disabled={isUpdating}
-                className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-              >
+              <button onClick={() => handleStatisticsUpdate('possession', 0, -5)} disabled={isUpdating} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
                 <MinusIcon className="w-3 h-3" />
               </button>
               <div className="flex-1 bg-gray-200 rounded-full h-4 relative">
-                <div 
-                  className="bg-blue-500 h-4 rounded-l-full"
-                  style={{ width: `${match.statistics?.possession?.team1 || 50}%` }}
-                ></div>
-                <div 
-                  className="bg-red-500 h-4 rounded-r-full absolute top-0 right-0"
-                  style={{ width: `${match.statistics?.possession?.team2 || 50}%` }}
-                ></div>
+                <div className="bg-blue-500 h-4 rounded-l-full" style={{ width: `${match.statistics?.possession?.team1 || 50}%` }}></div>
+                <div className="bg-red-500 h-4 rounded-r-full absolute top-0 right-0" style={{ width: `${match.statistics?.possession?.team2 || 50}%` }}></div>
               </div>
-              <button
-                onClick={() => handleStatisticsUpdate('possession', 0, 5)}
-                disabled={isUpdating}
-                className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-              >
+              <button onClick={() => handleStatisticsUpdate('possession', 0, 5)} disabled={isUpdating} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50">
                 <PlusIcon className="w-3 h-3" />
               </button>
             </div>
             <div className="flex justify-between text-xs text-gray-600 mt-2">
               <span>{match.statistics?.possession?.team1 || 50}%</span>
               <span>{match.statistics?.possession?.team2 || 50}%</span>
+            </div>
+          </div>
+
+          {/* Shots */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Shots</h4>
+            <div className="grid grid-cols-2 gap-3">
+              {[0,1].map((idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">{match.teams[idx]?.name}</span>
+                  <div className="flex items-center space-x-2">
+                    <button onClick={() => handleStatisticsUpdate('shots', idx, -1)} disabled={isUpdating} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"><MinusIcon className="w-3 h-3" /></button>
+                    <span className="w-8 text-center font-semibold">{match.statistics?.shots?.[idx === 0 ? 'team1' : 'team2'] || 0}</span>
+                    <button onClick={() => handleStatisticsUpdate('shots', idx, 1)} disabled={isUpdating} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"><PlusIcon className="w-3 h-3" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Fouls */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Fouls</h4>
+            <div className="grid grid-cols-2 gap-3">
+              {[0,1].map((idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">{match.teams[idx]?.name}</span>
+                  <div className="flex items-center space-x-2">
+                    <button onClick={() => handleStatisticsUpdate('fouls', idx, -1)} disabled={isUpdating} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"><MinusIcon className="w-3 h-3" /></button>
+                    <span className="w-8 text-center font-semibold">{match.statistics?.fouls?.[idx === 0 ? 'team1' : 'team2'] || 0}</span>
+                    <button onClick={() => handleStatisticsUpdate('fouls', idx, 1)} disabled={isUpdating} className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"><PlusIcon className="w-3 h-3" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Statistics - Cricket */}
+      {match.matchType === 'cricket' && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Cricket Analytics</h3>
+          {/* Overs */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Overs</h4>
+            <div className="flex items-center space-x-2">
+              <button onClick={() => handleOversUpdate(-1)} disabled={isUpdating} className="p-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"><MinusIcon className="w-4 h-4" /></button>
+              <span className="w-12 text-center font-semibold">{match.statistics?.overs || 0}</span>
+              <button onClick={() => handleOversUpdate(1)} disabled={isUpdating} className="p-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"><PlusIcon className="w-4 h-4" /></button>
             </div>
           </div>
         </div>

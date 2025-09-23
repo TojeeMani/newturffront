@@ -29,9 +29,9 @@ const PlayerDashboard = () => {
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Join Matches</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">Find and join matches with other players.</p>
-              <button className="btn-primary w-full">Find Matches</button>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">My Matches</h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">Live, upcoming and completed matches from your bookings.</p>
+              <button className="btn-primary w-full" onClick={() => navigate('/matches/my')}>View My Matches</button>
             </div>
           </div>
         </motion.div>

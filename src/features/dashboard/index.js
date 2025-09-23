@@ -7,3 +7,4 @@ export { default as AdminDashboard } from './AdminDashboard';
 export { default as OwnerTurfsPage } from './OwnerTurfsPage';
 export { default as OwnerBookingsPage } from './OwnerBookingsPage';
 export { default as OwnerAnalyticsPage } from './OwnerAnalyticsPage';
+export { default as OwnerMatchesPage } from '../matches/MatchManagement';

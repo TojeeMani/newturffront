@@ -174,6 +174,8 @@ const Navigation = () => {
                           Dashboard
                         </button>
 
+                        {/* Removed My Matches from dropdown as requested */}
+
                         {user?.userType === 'owner' && (
                           <button
                             onClick={() => {

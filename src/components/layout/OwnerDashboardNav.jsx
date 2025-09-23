@@ -44,6 +44,12 @@ const OwnerDashboardNav = () => {
       current: location.pathname === '/owner-dashboard'
     },
     {
+      name: 'Matches',
+      href: '/owner-dashboard/matches',
+      icon: CalendarIcon,
+      current: location.pathname === '/owner-dashboard/matches'
+    },
+    {
       name: 'My Turfs',
       href: '/owner-dashboard/turfs',
       icon: BuildingOfficeIcon,

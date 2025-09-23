@@ -24,6 +24,8 @@ const TurfDetails = () => {
   const { isAuthenticated } = useAuth();
   const [showConfirm, setShowConfirm] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('online');
+  const [teamA, setTeamA] = useState({ name: 'Team A', players: '' });
+  const [teamB, setTeamB] = useState({ name: 'Team B', players: '' });
   const [canReview, setCanReview] = useState(false);
   const [myRating, setMyRating] = useState(0);
   const [myComment, setMyComment] = useState('');
@@ -114,12 +116,16 @@ const TurfDetails = () => {
       return;
     }
     try {
+      const teamsPayload = [
+        { name: teamA.name?.trim() || 'Team A', players: (teamA.players || '') },
+        { name: teamB.name?.trim() || 'Team B', players: (teamB.players || '') }
+      ];
       if (selectedSlots.length === 1) {
         const { startTime, endTime } = selectedSlots[0];
-        await api.createBooking({ turfId: id, date: selectedDate, startTime, endTime, paymentMethod });
+        await api.createBooking({ turfId: id, date: selectedDate, startTime, endTime, paymentMethod, teams: teamsPayload });
       } else {
         const slots = selectedSlots.map(s => ({ date: selectedDate, startTime: s.startTime, endTime: s.endTime, paymentMethod }));
-        await api.createBooking({ turfId: id, slots });
+        await api.createBooking({ turfId: id, slots, teams: teamsPayload });
       }
       showSuccessToast('Booking confirmed!');
       await loadSlots(selectedDate);
@@ -304,6 +310,25 @@ const TurfDetails = () => {
 					</div>
 
 					<div className="mt-6">
+            {selectedSlots.length > 0 && (
+              <div className="mb-4 p-3 border rounded-lg bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700">
+                <h3 className="text-sm font-semibold mb-2">Teams (optional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Team A Name</label>
+                    <input value={teamA.name} onChange={e=>setTeamA(prev=>({...prev, name:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="Team A" />
+                    <label className="block text-xs text-gray-600 dark:text-gray-300 mt-2 mb-1">Team A Players (comma‑separated)</label>
+                    <input value={teamA.players} onChange={e=>setTeamA(prev=>({...prev, players:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="e.g. John, Mike, Ali" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Team B Name</label>
+                    <input value={teamB.name} onChange={e=>setTeamB(prev=>({...prev, name:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="Team B" />
+                    <label className="block text-xs text-gray-600 dark:text-gray-300 mt-2 mb-1">Team B Players (comma‑separated)</label>
+                    <input value={teamB.players} onChange={e=>setTeamB(prev=>({...prev, players:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="e.g. Sam, Raj, Omar" />
+                  </div>
+                </div>
+              </div>
+            )}
 						{!isAuthenticated && (
 							<div className="text-sm text-gray-600 dark:text-gray-300 mb-2">Login is required to book a slot.</div>
 						)}

@@ -1329,14 +1329,23 @@ const AdminDashboard = () => {
                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                           <h4 className="font-medium text-yellow-800 mb-2">Pending Changes:</h4>
                           <div className="space-y-2">
-                            {Array.from(turf.pendingChanges.entries()).map(([key, value]) => (
-                              <div key={key} className="text-sm">
-                                <span className="font-medium text-yellow-700">{key}:</span>
-                                <span className="text-yellow-600 ml-2">
-                                  {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                                </span>
-                              </div>
-                            ))}
+                            {(turf && turf.pendingChanges) ? (
+                              ((turf.pendingChanges instanceof Map)
+                                ? Array.from(turf.pendingChanges.entries())
+                                : Array.isArray(turf.pendingChanges)
+                                  ? turf.pendingChanges.map((v, i) => [i, v])
+                                  : Object.entries(turf.pendingChanges)
+                              ).map(([key, value]) => (
+                                <div key={key} className="text-sm">
+                                  <span className="font-medium text-yellow-700">{String(key)}:</span>
+                                  <span className="text-yellow-600 ml-2">
+                                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-sm text-yellow-700">No pending changes</div>
+                            )}
                           </div>
                         </div>
                       </div>

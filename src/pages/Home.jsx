@@ -28,13 +28,13 @@ import {
 } from '@heroicons/react/24/solid';
 
 import {
-  liveMatches,
   upcomingTournaments,
   aiFeatures,
   howItWorksSteps,
   testimonials,
   stats
 } from '../data/dummyData';
+import matchService from '../services/matchService';
 
 const Home = () => {
   const { isAuthenticated, user } = useAuth();
@@ -42,6 +42,13 @@ const Home = () => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [featuredTurfs, setFeaturedTurfs] = useState([]);
   const [loadingTurfs, setLoadingTurfs] = useState(true);
+  const [liveMatches, setLiveMatches] = useState([]);
+  const [upcomingMatches, setUpcomingMatches] = useState([]);
+  const [completedMatches, setCompletedMatches] = useState([]);
+  const [loadingMatches, setLoadingMatches] = useState(false);
+  const [myLiveMatches, setMyLiveMatches] = useState([]);
+  const [myUpcomingMatches, setMyUpcomingMatches] = useState([]);
+  const [myCompletedMatches, setMyCompletedMatches] = useState([]);
 
   // Redirect admins and owners to their dashboards
   useEffect(() => {
@@ -71,6 +78,80 @@ const Home = () => {
 
     fetchFeaturedTurfs();
   }, []);
+
+  // Fetch live and upcoming matches
+  useEffect(() => {
+    const fetchMatches = async () => {
+      try {
+        setLoadingMatches(true);
+        const basePromises = [
+          matchService.getMatches({ window: 'live', isPublic: true, limit: 6 }),
+          matchService.getMatches({ window: 'upcoming', isPublic: true, day: 'today', limit: 6 }),
+          matchService.getMatches({ status: 'completed', isPublic: true, limit: 20 })
+        ];
+        const userPromises = (isAuthenticated && user) ? [
+          matchService.getMatches({ window: 'live', customerId: user._id || user.id }),
+          matchService.getMatches({ window: 'upcoming', day: 'today', customerId: (user._id || user.id) }),
+          matchService.getMatches({ status: 'completed', customerId: (user._id || user.id), limit: 20 })
+        ] : [];
+
+        const results = await Promise.all([...basePromises, ...userPromises]);
+        const [liveRes, upcomingRes, completedRes, myLiveRes, myUpcomingRes, myCompletedRes] = [
+          results[0], results[1], results[2], results[3], results[4], results[5]
+        ];
+        const liveData = liveRes?.data || liveRes || [];
+        const upcomingData = upcomingRes?.data || upcomingRes || [];
+        setLiveMatches(Array.isArray(liveData) ? liveData : []);
+        setUpcomingMatches(Array.isArray(upcomingData) ? upcomingData : []);
+        const completedData = completedRes?.data || completedRes || [];
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        const completedArray = Array.isArray(completedData) ? completedData : [];
+        let completedFiltered = completedArray.filter(m => {
+          const when = new Date(m.endTime || m.startTime);
+          return when >= startOfDay && when <= endOfDay;
+        });
+        // Fallback to last 24 hours if none detected for local day (timezone-safe)
+        if (completedFiltered.length === 0) {
+          const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+          completedFiltered = completedArray.filter(m => new Date(m.endTime || m.startTime) >= last24h);
+        }
+        const completedSorted = completedFiltered
+          .sort((a,b) => new Date(b.endTime || b.startTime) - new Date(a.endTime || a.startTime))
+          .slice(0,6);
+        setCompletedMatches(completedSorted);
+        if (myLiveRes) {
+          const mineLive = myLiveRes?.data || myLiveRes || [];
+          setMyLiveMatches(Array.isArray(mineLive) ? mineLive : []);
+        } else setMyLiveMatches([]);
+        if (myUpcomingRes) {
+          const mineUpcoming = myUpcomingRes?.data || myUpcomingRes || [];
+          setMyUpcomingMatches(Array.isArray(mineUpcoming) ? mineUpcoming : []);
+        } else setMyUpcomingMatches([]);
+        if (myCompletedRes) {
+          const mineCompleted = myCompletedRes?.data || myCompletedRes || [];
+          // Show most recent 6 completed; optionally filter to last 7 days
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          const recent = (Array.isArray(mineCompleted) ? mineCompleted : []).filter(m => new Date(m.endTime || m.startTime) >= sevenDaysAgo)
+            .sort((a,b) => new Date(b.endTime || b.startTime) - new Date(a.endTime || a.startTime)).slice(0,6);
+          setMyCompletedMatches(recent);
+        } else setMyCompletedMatches([]);
+      } catch (e) {
+        setLiveMatches([]);
+        setUpcomingMatches([]);
+        setMyLiveMatches([]);
+        setMyUpcomingMatches([]);
+        setMyCompletedMatches([]);
+        setCompletedMatches([]);
+      } finally {
+        setLoadingMatches(false);
+      }
+    };
+    fetchMatches();
+    const id = setInterval(fetchMatches, 30000);
+    return () => clearInterval(id);
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -164,6 +245,8 @@ const Home = () => {
         </motion.div>
       </section>
 
+
+      
       {/* Stats Section */}
       <section className="py-16 bg-primary-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -345,11 +428,24 @@ const Home = () => {
               Watch exciting matches happening right now across the platform
             </p>
           </motion.div>
-
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {liveMatches.map((match, index) => (
+            {loadingMatches ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl shadow p-6 flex items-center justify-center text-gray-500">
+                  Loading live matches...
+                </div>
+              ))
+            ) : (() => {
+              const merged = [...(liveMatches || [])];
+              (myLiveMatches || []).forEach(m => {
+                if (!merged.find(x => x._id === m._id)) merged.push(m);
+              });
+              return merged.length === 0 ? (
+              <div className="col-span-full text-center text-gray-600">No live matches right now.</div>
+            ) : merged.map((match, index) => (
               <motion.div
-                key={match.id}
+                key={match._id || index}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -361,34 +457,34 @@ const Home = () => {
                     <span className="text-red-500 font-semibold text-sm">LIVE</span>
                   </div>
                   <div className="bg-gray-100 px-3 py-1 rounded-full text-sm font-medium text-gray-600">
-                    {match.sport}
+                    {match.matchType}
                   </div>
                 </div>
                 
                 <div className="text-center mb-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="text-center">
-                      <div className="font-bold text-gray-900 mb-1">{match.team1}</div>
-                      <div className="text-3xl font-bold text-primary-600">{match.score1}</div>
+                      <div className="font-bold text-gray-900 mb-1">{match.teams?.[0]?.name}</div>
+                      <div className="text-3xl font-bold text-primary-600">{match.teams?.[0]?.score ?? 0}</div>
                     </div>
                     <div className="text-center">
                       <div className="text-gray-500 text-sm mb-1">VS</div>
-                      <div className="text-lg font-semibold text-gray-600">{match.time}</div>
+                      <div className="text-lg font-semibold text-gray-600">{new Date(match.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
                     <div className="text-center">
-                      <div className="font-bold text-gray-900 mb-1">{match.team2}</div>
-                      <div className="text-3xl font-bold text-primary-600">{match.score2}</div>
+                      <div className="font-bold text-gray-900 mb-1">{match.teams?.[1]?.name}</div>
+                      <div className="text-3xl font-bold text-primary-600">{match.teams?.[1]?.score ?? 0}</div>
                     </div>
                   </div>
                 </div>
                 
                 <div className="text-center text-sm text-gray-600 mb-4">
                   <MapPinIcon className="w-4 h-4 inline mr-1" />
-                  {match.venue}
+                  {match.turfId?.name}
                 </div>
                 
                 <div className="flex gap-2">
-                  <button className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                  <button onClick={() => navigate(`/match/${match.shareCode}`)} className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
                     <EyeIcon className="w-4 h-4 inline mr-1" />
                     Watch Live
                   </button>
@@ -397,7 +493,8 @@ const Home = () => {
                   </button>
                 </div>
               </motion.div>
-            ))}
+            ));
+            })()}
           </div>
 
           <div className="text-center">
@@ -405,6 +502,118 @@ const Home = () => {
               View All Live Matches
               <ArrowRightIcon className="w-5 h-5 ml-2" />
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="upcoming-matches" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Upcoming Matches
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Matches starting soon. Join or watch as they go live.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {loadingMatches ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl shadow p-6 flex items-center justify-center text-gray-500">
+                  Loading upcoming matches...
+                </div>
+              ))
+            ) : (upcomingMatches || []).length === 0 ? (
+              <div className="col-span-full text-center text-gray-600">No matches.</div>
+            ) : (upcomingMatches || []).map((match, index) => (
+              <motion.div
+                key={match._id || index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="bg-white rounded-2xl shadow-lg p-6 card-hover"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                    <span className="text-yellow-700 font-semibold text-sm">SCHEDULED</span>
+                  </div>
+                  <div className="bg-gray-100 px-3 py-1 rounded-full text-sm font-medium text-gray-600">
+                    {match.matchType}
+                  </div>
+                </div>
+
+                <div className="text-center mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-center">
+                      <div className="font-bold text-gray-900 mb-1">{match.teams?.[0]?.name}</div>
+                      <div className="text-3xl font-bold text-primary-600">{match.teams?.[0]?.score ?? 0}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-500 text-sm mb-1">VS</div>
+                      <div className="text-lg font-semibold text-gray-600">{new Date(match.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-gray-900 mb-1">{match.teams?.[1]?.name}</div>
+                      <div className="text-3xl font-bold text-primary-600">{match.teams?.[1]?.score ?? 0}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center text-sm text-gray-600 mb-4">
+                  <MapPinIcon className="w-4 h-4 inline mr-1" />
+                  {match.turfId?.name}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Completed Matches Section */}
+      <section id="completed-matches" className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Recently Completed
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Finished matches sorted by most recent.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {loadingMatches ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl shadow p-6 flex items-center justify-center text-gray-500">
+                  Loading completed matches...
+                </div>
+              ))
+            ) : (completedMatches || []).length === 0 ? (
+              <div className="col-span-full text-center text-gray-600">No matches.</div>
+            ) : (completedMatches || []).map((m, i) => (
+              <div key={m._id || i} className="bg-white rounded-2xl shadow p-6">
+                <div className="flex items-center justify-between mb-2"><span className="text-green-600 text-xs font-semibold">COMPLETED</span><span className="text-sm bg-gray-100 px-2 py-0.5 rounded">{m.matchType}</span></div>
+                <div className="font-bold text-gray-900 mb-1">{m.matchName}</div>
+                <div className="text-xs text-gray-500 mb-3">{new Date(m.endTime || m.startTime).toLocaleString()}</div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-center"><div className="font-medium">{m.teams?.[0]?.name}</div><div className="text-2xl font-bold text-primary-600">{m.teams?.[0]?.score ?? 0}</div></div>
+                  <div className="text-gray-500">vs</div>
+                  <div className="text-center"><div className="font-medium">{m.teams?.[1]?.name}</div><div className="text-2xl font-bold text-primary-600">{m.teams?.[1]?.score ?? 0}</div></div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -514,6 +723,119 @@ const Home = () => {
                 </motion.div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Upcoming Matches Section */}
+      <section id="upcoming-matches" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Upcoming Matches
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Matches starting soon. Join or watch as they go live.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {loadingMatches ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl shadow p-6 flex items-center justify-center text-gray-500">
+                  Loading upcoming matches...
+                </div>
+              ))
+            ) : (upcomingMatches || []).length === 0 ? (
+              <div className="col-span-full text-center text-gray-600">No matches.</div>
+            ) : (upcomingMatches || []).map((match, index) => (
+              <motion.div
+                key={match._id || index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="bg-white rounded-2xl shadow-lg p-6 card-hover"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                    <span className="text-yellow-700 font-semibold text-sm">SCHEDULED</span>
+                  </div>
+                  <div className="bg-gray-100 px-3 py-1 rounded-full text-sm font-medium text-gray-600">
+                    {match.matchType}
+                  </div>
+                </div>
+
+                <div className="text-center mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-center">
+                      <div className="font-bold text-gray-900 mb-1">{match.teams?.[0]?.name}</div>
+                      <div className="text-3xl font-bold text-primary-600">{match.teams?.[0]?.score ?? 0}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-gray-500 text-sm mb-1">VS</div>
+                      <div className="text-lg font-semibold text-gray-600">{new Date(match.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-gray-900 mb-1">{match.teams?.[1]?.name}</div>
+                      <div className="text-3xl font-bold text-primary-600">{match.teams?.[1]?.score ?? 0}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center text-sm text-gray-600 mb-4">
+                  <MapPinIcon className="w-4 h-4 inline mr-1" />
+                  {match.turfId?.name}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Completed Matches Section */}
+      <section id="completed-matches" className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Recently Completed
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Finished matches sorted by most recent.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {loadingMatches ? (
+              [...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl shadow p-6 flex items-center justify-center text-gray-500">
+                  Loading completed matches...
+                </div>
+              ))
+            ) : (completedMatches || []).length === 0 ? (
+              <div className="col-span-full text-center text-gray-600">No matches.</div>
+            ) : (completedMatches || []).map((m, i) => (
+              <div key={m._id || i} className="bg-white rounded-2xl shadow p-6">
+                <div className="flex items-center justify-between mb-2"><span className="text-green-600 text-xs font-semibold">COMPLETED</span><span className="text-sm bg-gray-100 px-2 py-0.5 rounded">{m.matchType}</span></div>
+                <div className="font-bold text-gray-900 mb-1">{m.matchName}</div>
+                <div className="text-xs text-gray-500 mb-3">{new Date(m.endTime || m.startTime).toLocaleString()}</div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-center"><div className="font-medium">{m.teams?.[0]?.name}</div><div className="text-2xl font-bold text-primary-600">{m.teams?.[0]?.score ?? 0}</div></div>
+                  <div className="text-gray-500">vs</div>
+                  <div className="text-center"><div className="font-medium">{m.teams?.[1]?.name}</div><div className="text-2xl font-bold text-primary-600">{m.teams?.[1]?.score ?? 0}</div></div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

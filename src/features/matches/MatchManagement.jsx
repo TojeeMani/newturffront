@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   PlusIcon, 
@@ -19,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { showSuccessToast, showErrorToast } from '../../utils/toast';
 
 const MatchManagement = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,7 @@ const MatchManagement = () => {
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [showMatchViewer, setShowMatchViewer] = useState(false);
   const [shareCode, setShareCode] = useState('');
+  const [controlMatch, setControlMatch] = useState(null);
 
   useEffect(() => {
     loadMatches();
@@ -357,6 +360,7 @@ const MatchManagement = () => {
                       onPauseMatch={handlePauseMatch}
                       onCompleteMatch={handleCompleteMatch}
                       onShare={handleShare}
+                      onOpenControl={(m) => setControlMatch(m)}
                     />
                   ))}
                 </div>
@@ -379,6 +383,7 @@ const MatchManagement = () => {
                       onPauseMatch={handlePauseMatch}
                       onCompleteMatch={handleCompleteMatch}
                       onShare={handleShare}
+                      onOpenControl={(m) => setControlMatch(m)}
                     />
                   ))}
                 </div>
@@ -413,6 +418,7 @@ const MatchManagement = () => {
                         onPauseMatch={handlePauseMatch}
                         onCompleteMatch={handleCompleteMatch}
                         onShare={handleShare}
+                        onOpenControl={(m) => setControlMatch(m)}
                       />
                     )
                   ))}
@@ -486,6 +492,18 @@ const MatchManagement = () => {
             shareCode={shareCode}
             onClose={() => setShowMatchViewer(false)}
           />
+        )}
+        {controlMatch && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setControlMatch(null)} />
+            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-4xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold">Match Control</h3>
+                <button onClick={() => setControlMatch(null)} className="px-3 py-1 border rounded-md">Close</button>
+              </div>
+              <LiveMatchControl match={controlMatch} onUpdate={() => { setControlMatch(null); handleMatchUpdate(); }} />
+            </div>
+          </div>
         )}
       </AnimatePresence>
     </div>
