@@ -57,9 +57,9 @@ const OwnerDashboardNav = () => {
     },
     {
       name: 'Add Turf',
-      href: '/add-turf',
+      href: '/enhanced-add-turf',
       icon: PlusIcon,
-      current: location.pathname === '/add-turf'
+      current: location.pathname === '/enhanced-add-turf'
     },
     {
       name: 'Bookings',

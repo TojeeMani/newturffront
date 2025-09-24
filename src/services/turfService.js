@@ -95,6 +95,19 @@ class TurfService {
     }
   }
 
+  // Add sport to existing turf (private/owner)
+  async addSportToTurf(turfId, sportData) {
+    try {
+      const response = await api.request(`/turfs/${turfId}/sports`, {
+        method: 'POST',
+        body: JSON.stringify(sportData)
+      });
+      return response;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Update turf (private/owner)
   async updateTurf(id, turfData) {
     try {
@@ -274,9 +287,27 @@ class TurfService {
   // Get owner analytics data
   async getOwnerAnalytics(period = '30d') {
     try {
-      const response = await api.request(`/turfs/owner/analytics?period=${period}`);
-      return response;
+      console.log('📊 TurfService: Fetching analytics for period:', period);
+      // Add cache-busting parameter to avoid 304 responses
+      const cacheBuster = Date.now();
+      const response = await api.request(`/turfs/owner/analytics?period=${period}&_t=${cacheBuster}`);
+      console.log('📊 TurfService: Analytics response received:', response);
+      console.log('📊 TurfService: Response type:', typeof response);
+      console.log('📊 TurfService: Response keys:', Object.keys(response));
+      
+      // Check if response has the expected structure
+      if (response && response.data) {
+        console.log('📊 TurfService: Response has data property:', response.data);
+        return response.data;
+      } else if (response && !response.data) {
+        console.log('📊 TurfService: Response is direct data, no data wrapper');
+        return response;
+      } else {
+        console.log('📊 TurfService: Response structure unclear, returning as-is');
+        return response;
+      }
     } catch (error) {
+      console.error('📊 TurfService: Error fetching analytics:', error);
       throw this.handleError(error);
     }
   }

@@ -29,6 +29,7 @@ const AdminDashboard = React.lazy(() => import('./features/dashboard/AdminDashbo
 const ProfileSettings = React.lazy(() => import('./features/profile/ProfileSettings'));
 const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
 const AddTurf = React.lazy(() => import('./features/turfs/AddTurf'));
+const EnhancedAddTurf = React.lazy(() => import('./features/turfs/EnhancedAddTurf'));
 const TurfDetails = React.lazy(() => import('./features/turfs/TurfDetails'));
 const EditTurf = React.lazy(() => import('./features/turfs/EditTurf'));
 const MyBookings = React.lazy(() => import('./features/bookings/MyBookings'));
@@ -292,6 +293,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAuth={true} requiredRole="owner">
                     <AddTurf />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/enhanced-add-turf"
+                element={
+                  <ProtectedRoute requireAuth={true} requiredRole="owner">
+                    <EnhancedAddTurf />
                   </ProtectedRoute>
                 }
               />

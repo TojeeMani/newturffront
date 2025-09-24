@@ -314,23 +314,20 @@ const AddTurf = ({ editTurfId, forceEdit = false }) => {
     setSuccess('');
   };
 
-  // Reset form for new turf
+  // Reset form for new turf - completely blank form
   const handleAddNewTurf = () => {
     setEditingTurf(null);
     setIsEditMode(false);
     setFormData({
-      name: user?.businessName || '',
-      location: user?.turfLocation ? {
-        address: user.turfLocation,
-        coordinates: null
-      } : {
+      name: '', // Start completely blank - no pre-population
+      location: {
         address: '',
         coordinates: null
       },
       pricePerHour: '',
       images: [],
       amenities: [],
-      sport: user?.sportType || '',
+      sport: '', // Start blank - user must select
       description: '',
       availableSlots: {
         monday: { isOpen: true, slots: [] },
@@ -402,11 +399,11 @@ const AddTurf = ({ editTurfId, forceEdit = false }) => {
   const validateStep = (step) => {
     switch (step) {
       case 1:
-        return formData.name.trim() !== '' && formData.name === user?.businessName;
+        return formData.name.trim() !== '';
       case 2:
-        return formData.location.address && formData.location.address === user?.turfLocation;
+        return formData.location.address.trim() !== '';
       case 3:
-        return formData.pricePerHour && formData.sport && formData.sport === user?.sportType;
+        return formData.pricePerHour && formData.sport;
       case 4:
         return formData.images.length > 0;
       case 5:
@@ -490,17 +487,34 @@ const AddTurf = ({ editTurfId, forceEdit = false }) => {
         : imageUrls;
 
       // Ensure required fields exist; coerce types
-      const turfDataWithUrls = {
-        ...formData,
+      // Build base payload without location first to avoid triggering backend location validation on updates
+      const basePayload = {
         name: formData.name || editingTurf?.name || '',
-        location: {
-          address: formData.location?.address || editingTurf?.location?.address || '',
-          coordinates: formData.location?.coordinates || editingTurf?.location?.coordinates || null
-        },
         pricePerHour: parseFloat(formData.pricePerHour || editingTurf?.pricePerHour || 0),
         sport: formData.sport || editingTurf?.sport || '',
-        images: finalImages // Only Cloudinary URLs, no File objects
+        images: finalImages,
+        amenities: formData.amenities,
+        description: formData.description,
+        availableSlots: formData.availableSlots,
+        slotDuration: formData.slotDuration,
+        advanceBookingDays: formData.advanceBookingDays
       };
+
+      let turfDataWithUrls = { ...basePayload };
+
+      if (isEditMode) {
+        // For updates: only send location when coordinates are provided; send coordinates only
+        const coords = formData.location?.coordinates;
+        if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number') {
+          turfDataWithUrls.location = { coordinates: coords };
+        }
+      } else {
+        // For creates: include address (and optional coordinates)
+        turfDataWithUrls.location = {
+          address: formData.location?.address || '',
+          coordinates: formData.location?.coordinates || null
+        };
+      }
 
       console.log('🔍 Final turf data (URLs only):', turfDataWithUrls);
       console.log('🔍 Image URLs being sent:', imageUrls);

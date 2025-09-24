@@ -264,7 +264,7 @@ const OwnerDashboard = () => {
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button 
-                onClick={() => navigate('/add-turf')}
+                onClick={() => navigate('/enhanced-add-turf')}
                 className="flex items-center p-4 bg-primary-50 dark:bg-primary-900/10 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/20 transition-all duration-300 group border border-primary-200 dark:border-primary-800"
               >
                 <PlusIcon className="h-5 w-5 text-primary-600 dark:text-primary-400 mr-3 group-hover:scale-110 transition-transform" />
@@ -304,7 +304,7 @@ const OwnerDashboard = () => {
               </div>
               <button
                 className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2"
-                onClick={() => navigate('/add-turf')}
+                onClick={() => navigate('/enhanced-add-turf')}
               >
                 <PlusIcon className="h-4 w-4" />
                 <span>Add New Turf</span>
@@ -333,7 +333,7 @@ const OwnerDashboard = () => {
                 </p>
                 <button
                   className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 mx-auto"
-                  onClick={() => navigate('/add-turf')}
+                  onClick={() => navigate('/enhanced-add-turf')}
                 >
                   <PlusIcon className="h-5 w-5" />
                   <span>Add Your First Turf</span>
