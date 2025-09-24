@@ -17,7 +17,7 @@
 .env.production.local
 
 # Environment variables
-#.env
+.env
 
 # Google OAuth credentials
 client_secret_*.json
