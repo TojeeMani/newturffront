@@ -4,6 +4,7 @@ import turfService from '../../services/turfService';
 import { ArrowLeftIcon, MapPinIcon, StarIcon as StarIconSolid, ClockIcon } from '@heroicons/react/24/solid';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import EnhancedImage from '../../components/ui/EnhancedImage';
+import PaymentModal from '../../components/modals/PaymentModal';
 import { showErrorToast, showSuccessToast } from '../../utils/toast';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -24,12 +25,18 @@ const TurfDetails = () => {
   const { isAuthenticated } = useAuth();
   const [showConfirm, setShowConfirm] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('online');
+  const [courtType, setCourtType] = useState('full');
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentBooking, setPaymentBooking] = useState(null);
   const [teamA, setTeamA] = useState({ name: 'Team A', players: '' });
   const [teamB, setTeamB] = useState({ name: 'Team B', players: '' });
   const [canReview, setCanReview] = useState(false);
   const [myRating, setMyRating] = useState(0);
   const [myComment, setMyComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState('');
   const location = useLocation();
 
 	const loadTurf = useCallback(async () => {
@@ -44,9 +51,26 @@ const TurfDetails = () => {
 		}
 	}, [id]);
 
+  const loadReviews = useCallback(async () => {
+    if (!id) return;
+    try {
+      setReviewsLoading(true);
+      setReviewsError('');
+      const res = await turfService.getTurfReviews(id);
+      const data = res?.data || res;
+      setReviews(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setReviewsError(err.message || 'Failed to load reviews');
+      setReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  }, [id]);
+
 	useEffect(() => {
 		loadTurf();
-	}, [loadTurf]);
+    loadReviews();
+	}, [loadTurf, loadReviews]);
 
   useEffect(() => {
     const checkEligibility = async () => {
@@ -122,19 +146,36 @@ const TurfDetails = () => {
       ];
       if (selectedSlots.length === 1) {
         const { startTime, endTime } = selectedSlots[0];
-        await api.createBooking({ turfId: id, date: selectedDate, startTime, endTime, paymentMethod, teams: teamsPayload });
+        const res = await api.createBooking({ turfId: id, date: selectedDate, startTime, endTime, paymentMethod, teams: teamsPayload, courtType });
+        const booking = res?.data || res;
+
+        if (paymentMethod === 'online') {
+          const factor = courtType === 'half' ? 0.5 : 1;
+          const amount = booking?.totalAmount || (turf.pricePerHour * ((turf.slotDuration || 60) / 60) * factor);
+          setPaymentBooking({ id: booking?._id, amount, turfName: turf?.name });
+          setShowPayment(true);
+        } else {
+          showSuccessToast('Booking confirmed!');
+          await loadSlots(selectedDate);
+          setSelectedSlots([]);
+          setShowConfirm(false);
+        }
       } else {
-        const slots = selectedSlots.map(s => ({ date: selectedDate, startTime: s.startTime, endTime: s.endTime, paymentMethod }));
-        await api.createBooking({ turfId: id, slots, teams: teamsPayload });
+        if (paymentMethod === 'online') {
+          showErrorToast('Online payment supports single-slot bookings for now.');
+          return;
+        }
+        const slots = selectedSlots.map(s => ({ date: selectedDate, startTime: s.startTime, endTime: s.endTime, paymentMethod, courtType }));
+        await api.createBooking({ turfId: id, slots, teams: teamsPayload, courtType });
+        showSuccessToast('Booking confirmed!');
+        await loadSlots(selectedDate);
+        setSelectedSlots([]);
+        setShowConfirm(false);
       }
-      showSuccessToast('Booking confirmed!');
-      await loadSlots(selectedDate);
-      setSelectedSlots([]);
-      setShowConfirm(false);
     } catch (e) {
       showErrorToast(e.message || 'Failed to complete booking');
     }
-  }, [id, selectedDate, selectedSlots, isAuthenticated, navigate, loadSlots, paymentMethod]);
+  }, [id, selectedDate, selectedSlots, isAuthenticated, navigate, loadSlots, paymentMethod, courtType, turf]);
 
 	if (loading) {
 		return (
@@ -204,8 +245,9 @@ const TurfDetails = () => {
                   await turfService.createReview(id, { rating: myRating, comment: myComment });
                   showSuccessToast('Thank you for your review!');
                   setCanReview(false);
-                  // Refresh turf to update rating/totalReviews
+                  // Refresh turf to update rating/totalReviews and reload reviews
                   await loadTurf();
+                  await loadReviews();
                 } catch (e) {
                   showErrorToast(e.message || 'Failed to submit review');
                 } finally { setSubmittingReview(false); }
@@ -248,6 +290,168 @@ const TurfDetails = () => {
 							</div>
 						</div>
 					)}
+
+					{/* User Reviews Section - Flipkart Style */}
+					<div className="mb-6">
+						<div className="flex items-center justify-between mb-4">
+							<h2 className="text-xl font-semibold">Ratings & Reviews</h2>
+							<div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+								<span>{reviews.length} Reviews</span>
+							</div>
+						</div>
+
+						{reviewsLoading && (
+							<div className="text-sm text-gray-500 flex items-center justify-center py-8">
+								<ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" /> Loading reviews...
+							</div>
+						)}
+
+						{reviewsError && (
+							<div className="text-sm text-red-600 mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+								{reviewsError}
+							</div>
+						)}
+
+						{!reviewsLoading && !reviewsError && (
+							<>
+								{/* Overall Rating Summary */}
+								{reviews.length > 0 && (
+									<div className="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+										<div className="flex items-center justify-between">
+											<div className="flex items-center">
+												<div className="text-4xl font-bold text-gray-900 dark:text-gray-100 mr-4">
+													{turf.rating ? turf.rating.toFixed(1) : 'New'}
+												</div>
+												<div>
+													<div className="flex items-center mb-1">
+														{[...Array(5)].map((_, i) => (
+															<StarIconSolid key={i} className={`w-5 h-5 ${i < Math.floor(turf.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`} />
+														))}
+													</div>
+													<div className="text-sm text-gray-600 dark:text-gray-400">
+														{turf.totalReviews || reviews.length} ratings & {reviews.length} reviews
+													</div>
+												</div>
+											</div>
+											
+											{/* Rating Distribution */}
+											<div className="flex-1 max-w-xs ml-8">
+												{[5, 4, 3, 2, 1].map(rating => {
+													const count = reviews.filter(r => r.rating === rating).length;
+													const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+													return (
+														<div key={rating} className="flex items-center mb-1">
+															<span className="text-sm w-3 text-gray-600 dark:text-gray-400">{rating}</span>
+															<StarIconSolid className="w-3 h-3 text-yellow-400 mx-1" />
+															<div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mx-2">
+																<div 
+																	className="bg-green-500 h-2 rounded-full transition-all duration-300"
+																	style={{ width: `${percentage}%` }}
+																></div>
+															</div>
+															<span className="text-xs text-gray-500 dark:text-gray-400 w-8">{count}</span>
+														</div>
+													);
+												})}
+											</div>
+										</div>
+									</div>
+								)}
+
+								{/* Individual Reviews */}
+								<div className="space-y-4">
+									{reviews.length > 0 ? (
+										reviews.map((review, idx) => (
+											<div key={idx} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0">
+												<div className="flex items-start space-x-4">
+													{/* User Avatar */}
+													<div className="flex-shrink-0">
+														<div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+															{(review.userId?.name || 'A').charAt(0).toUpperCase()}
+														</div>
+													</div>
+													
+													{/* Review Content */}
+													<div className="flex-1 min-w-0">
+														<div className="flex items-center justify-between mb-2">
+															<div>
+																<h4 className="font-medium text-gray-900 dark:text-gray-100">
+																	{review.userId?.name || 'Anonymous User'}
+																</h4>
+																<div className="flex items-center mt-1">
+																	<div className="flex items-center mr-3">
+																		{[...Array(5)].map((_, i) => (
+																			<StarIconSolid key={i} className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`} />
+																		))}
+																	</div>
+																	<span className="text-sm text-gray-600 dark:text-gray-400">
+																		{review.bookingId?.bookingDate ? new Date(review.bookingId.bookingDate).toLocaleDateString('en-IN', {
+																			day: 'numeric',
+																			month: 'short',
+																			year: 'numeric'
+																		}) : new Date(review.createdAt).toLocaleDateString('en-IN', {
+																			day: 'numeric',
+																			month: 'short',
+																			year: 'numeric'
+																		})}
+																	</span>
+																</div>
+															</div>
+															
+															{/* Verified Badge */}
+															<div className="flex items-center">
+																<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+																	<svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+																		<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+																	</svg>
+																	Verified Booking
+																</span>
+															</div>
+														</div>
+														
+														{/* Review Text */}
+														{review.comment && (
+															<div className="mt-3">
+																<p className="text-gray-700 dark:text-gray-200 text-sm leading-relaxed">
+																	{review.comment}
+																</p>
+															</div>
+														)}
+														
+														{/* Helpful Actions */}
+														<div className="flex items-center mt-4 space-x-4">
+															<button className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+																<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L9 6v4m-2 4h2m0 0h2m-2 0v2m0-2v-2" />
+																</svg>
+																Helpful
+															</button>
+															<button className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+																<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+																</svg>
+																Report
+															</button>
+														</div>
+													</div>
+												</div>
+											</div>
+										))
+									) : (
+										<div className="text-center py-12">
+											<div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+												<StarIconSolid className="w-8 h-8 text-gray-400" />
+											</div>
+											<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No reviews yet</h3>
+											<p className="text-gray-500 dark:text-gray-400 mb-4">
+												Be the first to review this turf and help others make informed decisions!
+											</p>
+										</div>
+									)}
+								</div>
+							</>
+						)}
+					</div>
 
 					<div className="mb-4">
 						<h2 className="text-lg font-semibold mb-2">Availability</h2>
@@ -333,6 +537,13 @@ const TurfDetails = () => {
 							<div className="text-sm text-gray-600 dark:text-gray-300 mb-2">Login is required to book a slot.</div>
 						)}
             <div className="mb-3">
+              <label className="text-sm text-gray-700 dark:text-gray-300 mr-2">Court Type</label>
+              <select value={courtType} onChange={(e) => setCourtType(e.target.value)} className="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
+                <option value="full">Full Court</option>
+                <option value="half">Half Court</option>
+              </select>
+            </div>
+            <div className="mb-3">
               <label className="text-sm text-gray-700 dark:text-gray-300 mr-2">Payment</label>
               <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
                 <option value="online">Online</option>
@@ -351,19 +562,37 @@ const TurfDetails = () => {
 						</button>
 					</div>
 
-					<BookingConfirmModal
-						open={showConfirm}
-						onClose={() => setShowConfirm(false)}
-						onConfirm={handleConfirmBooking}
-						turf={turf}
-						date={selectedDate}
-						startTime={selectedSlots[0]?.startTime}
-						endTime={selectedSlots[0]?.endTime}
-						pricePerHour={turf.pricePerHour}
-						durationMinutes={turf.slotDuration}
-						selectedSlots={selectedSlots}
-						totalAmount={selectedSlots.length * turf.pricePerHour * ((turf.slotDuration || 60) / 60)}
-					/>
+          <BookingConfirmModal
+            open={showConfirm}
+            onClose={() => setShowConfirm(false)}
+            onConfirm={handleConfirmBooking}
+            turf={turf}
+            date={selectedDate}
+            startTime={selectedSlots[0]?.startTime}
+            endTime={selectedSlots[0]?.endTime}
+            pricePerHour={turf.pricePerHour}
+            durationMinutes={turf.slotDuration}
+            selectedSlots={selectedSlots}
+            courtType={courtType}
+            totalAmount={selectedSlots.length * turf.pricePerHour * ((turf.slotDuration || 60) / 60) * (courtType === 'half' ? 0.5 : 1)}
+          />
+
+          <PaymentModal
+            isOpen={showPayment}
+            onClose={() => { setShowPayment(false); setShowConfirm(false); }}
+            bookingDetails={paymentBooking}
+            onPaymentSuccess={async () => {
+              showSuccessToast('Payment successful! Booking confirmed.');
+              await loadSlots(selectedDate);
+              setSelectedSlots([]);
+              setShowPayment(false);
+              // Redirect to My Bookings page after successful payment
+              navigate('/bookings/my');
+            }}
+            onPaymentFailure={(err) => {
+              showErrorToast(err?.message || 'Payment failed. Please try again.');
+            }}
+          />
 				</div>
 			</div>
 		</div>

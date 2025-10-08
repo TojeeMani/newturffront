@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { ArrowPathIcon, StarIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 
 const MyBookings = () => {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -106,7 +108,13 @@ const MyBookings = () => {
       ) : (
         <div className="space-y-3">
           {bookings.map((b) => (
-            <div key={b._id} className="bg-white rounded-xl border p-4 flex items-center justify-between">
+            <div
+              key={b._id}
+              className="bg-white rounded-xl border p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer"
+              onClick={() => navigate(`/bookings/${b._id}`)}
+              role="button"
+              tabIndex={0}
+            >
               <div>
                 <div className="font-semibold">{b.turfId?.name || 'Turf'}</div>
                 <div className="text-sm text-gray-600">{new Date(b.bookingDate).toDateString()} • {b.startTime} - {b.endTime}</div>
@@ -119,7 +127,7 @@ const MyBookings = () => {
                 </div>
                 {canRate(b) && (
                   <button
-                    onClick={() => openRatingModal(b)}
+                    onClick={(e) => { e.stopPropagation(); openRatingModal(b); }}
                     className="px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1"
                   >
                     <StarIcon className="w-4 h-4" />

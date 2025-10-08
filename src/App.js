@@ -33,6 +33,7 @@ const EnhancedAddTurf = React.lazy(() => import('./features/turfs/EnhancedAddTur
 const TurfDetails = React.lazy(() => import('./features/turfs/TurfDetails'));
 const EditTurf = React.lazy(() => import('./features/turfs/EditTurf'));
 const MyBookings = React.lazy(() => import('./features/bookings/MyBookings'));
+const BookingDetails = React.lazy(() => import('./features/bookings/BookingDetails'));
 const MyMatches = React.lazy(() => import('./pages/MyMatches'));
 const PublicMatchViewer = React.lazy(() => import('./pages/PublicMatchViewer'));
 
@@ -197,6 +198,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAuth={true}>
                     <Layout><MyBookings /></Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/bookings/:id"
+                element={
+                  <ProtectedRoute requireAuth={true}>
+                    <Layout><BookingDetails /></Layout>
                   </ProtectedRoute>
                 }
               />

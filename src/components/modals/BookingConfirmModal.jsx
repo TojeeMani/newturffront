@@ -1,6 +1,6 @@
 import React from 'react';
 
-const BookingConfirmModal = ({ open, onClose, onConfirm, turf, date, startTime, endTime, pricePerHour, durationMinutes, selectedSlots = [], totalAmount }) => {
+const BookingConfirmModal = ({ open, onClose, onConfirm, turf, date, startTime, endTime, pricePerHour, durationMinutes, selectedSlots = [], totalAmount, courtType }) => {
   if (!open) return null;
 
   const hasMulti = Array.isArray(selectedSlots) && selectedSlots.length > 1;
@@ -15,6 +15,9 @@ const BookingConfirmModal = ({ open, onClose, onConfirm, turf, date, startTime, 
         <div className="space-y-2 text-sm text-gray-700 dark:text-gray-200">
           <div className="flex justify-between"><span>Turf</span><span>{turf?.name}</span></div>
           <div className="flex justify-between"><span>Date</span><span>{date}</span></div>
+          {courtType && (
+            <div className="flex justify-between"><span>Court</span><span>{courtType === 'half' ? 'Half Court' : 'Full Court'}</span></div>
+          )}
           {!hasMulti ? (
             <>
               <div className="flex justify-between"><span>Time</span><span>{startTime} - {endTime}</span></div>
