@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import turfService from '../../services/turfService';
 import { ArrowLeftIcon, MapPinIcon, StarIcon as StarIconSolid, ClockIcon } from '@heroicons/react/24/solid';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
-import EnhancedImage from '../../components/ui/EnhancedImage';
+import { EnhancedImage, ImageCarousel } from '../../components/ui';
 import PaymentModal from '../../components/modals/PaymentModal';
 import { showErrorToast, showSuccessToast } from '../../utils/toast';
 import { useAuth } from '../../context/AuthContext';
@@ -16,7 +16,7 @@ const TurfDetails = () => {
   const [turf, setTurf] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
-	const [activeImage, setActiveImage] = useState(0);
+  const [activeImage, setActiveImage] = useState(0);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState('');
@@ -206,22 +206,22 @@ const TurfDetails = () => {
 
 			<div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 				<div className="lg:col-span-3">
-					<div className="w-full aspect-video rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800">
-						{images.length > 0 ? (
-							<EnhancedImage src={images[activeImage]} alt={turf.name} className="w-full h-full object-cover" sport={turf.sport?.toLowerCase()} />
-						) : (
-							<div className="w-full h-full flex items-center justify-center text-gray-400">No image</div>
-						)}
+          <div className="w-full h-64 md:h-80 lg:h-[28rem] rounded-2xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+        {images.length > 0 ? (
+            <ImageCarousel
+              images={images}
+              alt={turf.name}
+              sport={turf.sport?.toLowerCase()}
+              className="w-full h-full"
+              imageClassName="w-full h-full object-contain"
+              showArrows={true}
+              showIndicators={true}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-400">No image</div>
+          )}
 					</div>
-					{images.length > 1 && (
-						<div className="mt-3 grid grid-cols-5 md:grid-cols-6 gap-2">
-							{images.map((img, idx) => (
-								<button key={idx} onClick={() => setActiveImage(idx)} className={`rounded-lg overflow-hidden border ${activeImage === idx ? 'border-primary-600' : 'border-gray-200 dark:border-gray-700'}`}>
-									<img src={img} alt={`${turf.name} ${idx + 1}`} className="w-full h-16 object-cover" />
-								</button>
-							))}
-						</div>
-					)}
+          {/* Thumbnails replaced by carousel indicators */}
 				</div>
 
           {canReview && (

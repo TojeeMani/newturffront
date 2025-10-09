@@ -9,6 +9,7 @@ const EnhancedImage = ({
   fallbackSrc = null,
   showPlaceholder = true,
   lazy = true,
+  containerClassName = '',
   ...props 
 }) => {
   const [currentSrc, setCurrentSrc] = useState(showPlaceholder ? generatePlaceholder(400, 300, '#f3f4f6', 'Loading...') : src);
@@ -82,7 +83,7 @@ const EnhancedImage = ({
   }
 
   return (
-    <div className="relative">
+    <div className={`relative ${containerClassName}`}>
       <img {...imageProps} alt={imageProps.alt || `${sport} image`} />
 
       {isLoading && (

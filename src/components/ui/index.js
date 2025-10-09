@@ -2,6 +2,7 @@
 export { default as ImageUpload } from './ImageUpload';
 export { default as ProfileImageUpload } from './ProfileImageUpload';
 export { default as EnhancedImage } from './EnhancedImage';
+export { default as ImageCarousel } from './ImageCarousel';
 export { default as DocumentViewer } from './DocumentViewer';
 export { default as DevOTPDisplay } from './DevOTPDisplay';
 

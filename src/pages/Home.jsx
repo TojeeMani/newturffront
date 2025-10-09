@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { EnhancedImage, CardSkeleton, SearchLoader, ChatWidget } from '../components/ui';
+import { EnhancedImage, ImageCarousel, CardSkeleton, SearchLoader, ChatWidget } from '../components/ui';
 import { getDashboardRoute } from '../utils/dashboardRoutes';
 import turfService from '../services/turfService';
 import {
@@ -304,11 +304,17 @@ const Home = () => {
                   onClick={() => navigate(`/turfs/${turf._id}`)}
                 >
                   <div className="relative">
-                    <EnhancedImage
-                      src={turf.images?.[0]}
+                    <ImageCarousel
+                      images={Array.isArray(turf.images) ? turf.images : (turf.images ? [turf.images] : [])}
                       alt={turf.name}
-                      className="w-full h-48 object-cover"
+                      className="w-full h-56 md:h-64 lg:h-72"
+                      imageClassName="w-full h-56 md:h-64 lg:h-72 object-cover"
                       sport={turf.sport?.toLowerCase()}
+                      autoPlay={true}
+                      interval={3500}
+                      showArrows={false}
+                      showIndicators={true}
+                      rounded={false}
                     />
                     <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full p-2">
                       <HeartIcon className="w-5 h-5 text-gray-600" />
