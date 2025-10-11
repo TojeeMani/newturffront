@@ -130,6 +130,9 @@ const Login = () => {
         setOtpSent(true);
         setErrors({ success: result.message });
         console.log('🔍 OTP sent successfully:', result);
+        if (result.emailProvider === 'sendgrid') {
+          toast.success('Email sent via SendGrid');
+        }
       } else {
         setErrors({ general: result.message || 'Failed to send OTP. Please try again.' });
       }

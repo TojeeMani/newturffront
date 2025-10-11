@@ -91,6 +91,9 @@ const OTPVerification = ({ userId, email, userType, onVerificationComplete }) =>
       
       if (result.success) {
         showSuccessToast('New OTP sent to your email successfully!');
+        if (result.emailProvider === 'sendgrid') {
+          showInfoToast('Email sent via SendGrid');
+        }
         setCountdown(60); // Start 60-second countdown
       } else {
         setError(result.message || 'Failed to resend OTP');
@@ -190,4 +193,4 @@ const OTPVerification = ({ userId, email, userType, onVerificationComplete }) =>
   );
 };
 
-export default OTPVerification; 
+export default OTPVerification;
