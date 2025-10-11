@@ -10,6 +10,8 @@ const OwnerBookingsPage = () => {
   const { user } = useAuth();
   const [turfs, setTurfs] = useState([]);
   const [selectedTurf, setSelectedTurf] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
   const getTodayYmd = () => {
     const d = new Date();
     const pad = (n) => String(n).padStart(2, '0');
@@ -26,6 +28,15 @@ const OwnerBookingsPage = () => {
   const todayYmd = getTodayYmd();
   const maxAllowedDate = getMaxAllowedDate();
   const [selectedDate, setSelectedDate] = useState(todayYmd);
+
+  const openDetails = (booking) => {
+    setSelectedBooking(booking || null);
+    setShowDetailsModal(!!booking);
+  };
+  const closeDetails = () => {
+    setShowDetailsModal(false);
+    setSelectedBooking(null);
+  };
   
   const handleDateChange = (newDate) => {
     if (newDate >= todayYmd && newDate <= maxAllowedDate) {
@@ -519,6 +530,14 @@ const OwnerBookingsPage = () => {
                           {b.customerInfo?.phone && <span><Phone className="inline h-4 w-4 mr-1" />{b.customerInfo.phone}</span>}
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openDetails(b)}
+                          className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          View Details
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -543,6 +562,137 @@ const OwnerBookingsPage = () => {
             <div className="flex gap-2">
               <input value={scannedCode} onChange={(e)=>{ setScannedCode(e.target.value); setScanError(''); }} placeholder="4‑digit code" maxLength={4} className="flex-1 px-3 py-2 border rounded" />
               <button onClick={()=> verifyAndCheckIn(scannedCode)} className="px-3 py-2 bg-primary-600 text-white rounded">Verify</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDetailsModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Booking Details</h3>
+              <button onClick={closeDetails} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500">Booking Code</div>
+                  <div className="text-sm font-medium">{selectedBooking.bookingCode || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Turf</div>
+                  <div className="text-sm font-medium">{selectedBooking.turfId?.name || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Date</div>
+                  <div className="text-sm font-medium">{selectedBooking.bookingDate ? new Date(selectedBooking.bookingDate).toLocaleDateString() : '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Time</div>
+                  <div className="text-sm font-medium">{selectedBooking.startTime} - {selectedBooking.endTime}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Duration</div>
+                  <div className="text-sm font-medium">{selectedBooking.duration ? `${selectedBooking.duration} min` : '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Court Type</div>
+                  <div className="text-sm font-medium capitalize">{selectedBooking.courtType || '—'}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500">Price / Hour</div>
+                  <div className="text-sm font-medium">₹{selectedBooking.pricePerHour ?? '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Total Amount</div>
+                  <div className="text-sm font-medium">₹{selectedBooking.totalAmount ?? '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Payment Status</div>
+                  <div className="text-sm font-medium capitalize">{selectedBooking.paymentStatus || 'pending'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Payment Method</div>
+                  <div className="text-sm font-medium capitalize">{selectedBooking.paymentMethod || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Paid Amount</div>
+                  <div className="text-sm font-medium">₹{selectedBooking.paymentAmount ?? 0}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Refund Status</div>
+                  <div className="text-sm font-medium capitalize">{selectedBooking.refundStatus || 'none'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Refund Amount</div>
+                  <div className="text-sm font-medium">₹{selectedBooking.refundAmount ?? 0}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500">Booking Type</div>
+                  <div className="text-sm font-medium capitalize">{selectedBooking.bookingType || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Status</div>
+                  <div className="text-sm font-medium capitalize">{selectedBooking.status || '—'}</div>
+                </div>
+                {selectedBooking.cancellationReason && (
+                  <div className="col-span-2">
+                    <div className="text-xs text-gray-500">Cancellation Reason</div>
+                    <div className="text-sm font-medium">{selectedBooking.cancellationReason}</div>
+                  </div>
+                )}
+                {selectedBooking.cancelledAt && (
+                  <div>
+                    <div className="text-xs text-gray-500">Cancelled At</div>
+                    <div className="text-sm font-medium">{new Date(selectedBooking.cancelledAt).toLocaleString()}</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500">Customer Name</div>
+                  <div className="text-sm font-medium">{selectedBooking.customerId?.name || selectedBooking.customerInfo?.name || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Phone</div>
+                  <div className="text-sm font-medium">{selectedBooking.customerId?.phone || selectedBooking.customerInfo?.phone || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Email</div>
+                  <div className="text-sm font-medium">{selectedBooking.customerId?.email || selectedBooking.customerInfo?.email || '—'}</div>
+                </div>
+              </div>
+
+              {selectedBooking.notes && (
+                <div>
+                  <div className="text-xs text-gray-500">Notes</div>
+                  <div className="text-sm font-medium whitespace-pre-wrap">{selectedBooking.notes}</div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500">Created At</div>
+                  <div className="text-sm font-medium">{selectedBooking.createdAt ? new Date(selectedBooking.createdAt).toLocaleString() : '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Updated At</div>
+                  <div className="text-sm font-medium">{selectedBooking.updatedAt ? new Date(selectedBooking.updatedAt).toLocaleString() : '—'}</div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button onClick={closeDetails} className="px-3 py-2 rounded border">Close</button>
+              </div>
             </div>
           </div>
         </div>

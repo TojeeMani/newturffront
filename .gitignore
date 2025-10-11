@@ -18,6 +18,7 @@
 
 # Environment variables
 .env
+.env.example
 
 # Google OAuth credentials
 client_secret_*.json

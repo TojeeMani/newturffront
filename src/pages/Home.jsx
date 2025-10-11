@@ -87,12 +87,12 @@ const Home = () => {
         const basePromises = [
           matchService.getMatches({ window: 'live', isPublic: true, limit: 6 }),
           matchService.getMatches({ window: 'upcoming', isPublic: true, day: 'today', limit: 6 }),
-          matchService.getMatches({ status: 'completed', isPublic: true, limit: 20 })
+          matchService.getMatches({ window: 'completed', isPublic: true, day: 'today', limit: 20 })
         ];
         const userPromises = (isAuthenticated && user) ? [
           matchService.getMatches({ window: 'live', customerId: user._id || user.id }),
           matchService.getMatches({ window: 'upcoming', day: 'today', customerId: (user._id || user.id) }),
-          matchService.getMatches({ status: 'completed', customerId: (user._id || user.id), limit: 20 })
+          matchService.getMatches({ window: 'completed', day: 'today', customerId: (user._id || user.id), limit: 20 })
         ] : [];
 
         const results = await Promise.all([...basePromises, ...userPromises]);
