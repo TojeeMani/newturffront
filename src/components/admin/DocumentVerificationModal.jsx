@@ -23,7 +23,7 @@ const DocumentVerificationModal = ({ isOpen, onClose, ownerId, ownerName, docume
 
   const documentTypes = [
     { value: 'business_license', label: 'Business License', icon: '🏢' },
-    { value: 'pan_card', label: 'PAN Card', icon: '🆔' },
+    { value: 'pan_card', label: 'PAN CARD', icon: '🆔' },
     { value: 'aadhaar_card', label: 'Aadhaar Card', icon: '📄' },
     { value: 'gst_certificate', label: 'GST Certificate', icon: '📋' }
   ];
