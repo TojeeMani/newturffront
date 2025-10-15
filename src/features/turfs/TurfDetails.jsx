@@ -24,6 +24,7 @@ const TurfDetails = () => {
   const { isAuthenticated } = useAuth();
   const [paymentMethod, setPaymentMethod] = useState('online');
   const [courtType, setCourtType] = useState('full');
+  const [courtSide, setCourtSide] = useState('left');
   const [showPayment, setShowPayment] = useState(false);
   const [paymentBooking, setPaymentBooking] = useState(null);
   const [teamA, setTeamA] = useState({ name: 'Team A', players: '' });
@@ -105,14 +106,14 @@ const TurfDetails = () => {
     return d.toISOString().slice(0, 10);
   }, [turf?.advanceBookingDays]);
 
-  const loadSlots = useCallback(async (dateStr) => {
+  const loadSlots = useCallback(async (dateStr, courtTypeParam = courtType) => {
     if (!id || !dateStr) return;
     try {
       setSlotsLoading(true);
       setSlotsError('');
       setAvailableSlots([]);
 
-      const res = await turfService.getAvailableSlots(id, dateStr);
+      const res = await turfService.getAvailableSlots(id, dateStr, courtTypeParam);
       const data = res?.data || res;
       // Accept a few shapes: { slots: [...] } or direct array
       const slots = Array.isArray(data?.slots) ? data.slots : (Array.isArray(data) ? data : []);
@@ -122,13 +123,20 @@ const TurfDetails = () => {
     } finally {
       setSlotsLoading(false);
     }
-  }, [id]);
+  }, [id, courtType]);
 
   useEffect(() => {
     if (selectedDate) {
       loadSlots(selectedDate);
     }
   }, [selectedDate, loadSlots]);
+
+  // Reload slots when court type changes
+  useEffect(() => {
+    if (selectedDate) {
+      loadSlots(selectedDate, courtType);
+    }
+  }, [courtType, selectedDate, loadSlots]);
 
   const handleConfirmBooking = useCallback(async () => {
     if (!selectedDate || selectedSlots.length === 0) return;
@@ -143,12 +151,25 @@ const TurfDetails = () => {
         { name: teamB.name?.trim() || 'Team B', players: (teamB.players || '') }
       ];
       if (selectedSlots.length === 1) {
-        const { startTime, endTime } = selectedSlots[0];
-        const res = await api.createBooking({ turfId: id, date: selectedDate, startTime, endTime, paymentMethod, teams: teamsPayload, courtType });
+        const { startTime, endTime, courtType: slotCourtType, courtSide: slotCourtSide } = selectedSlots[0];
+        
+        const finalCourtType = slotCourtType || courtType;
+        const finalCourtSide = slotCourtSide || (finalCourtType === 'half' ? courtSide : undefined);
+        
+        const res = await api.createBooking({ 
+          turfId: id, 
+          date: selectedDate, 
+          startTime, 
+          endTime, 
+          paymentMethod, 
+          teams: teamsPayload, 
+          courtType: finalCourtType,
+          courtSide: finalCourtSide
+        });
         const booking = res?.data || res;
 
         if (paymentMethod === 'online') {
-          const factor = courtType === 'half' ? 0.5 : 1;
+          const factor = (slotCourtType || courtType) === 'half' ? 0.5 : 1;
           const amount = booking?.totalAmount || (turf.pricePerHour * ((turf.slotDuration || 60) / 60) * factor);
           setPaymentBooking({ id: booking?._id, amount, turfName: turf?.name });
           setShowPayment(true);
@@ -162,7 +183,14 @@ const TurfDetails = () => {
           showErrorToast('Online payment supports single-slot bookings for now.');
           return;
         }
-        const slots = selectedSlots.map(s => ({ date: selectedDate, startTime: s.startTime, endTime: s.endTime, paymentMethod, courtType }));
+        const slots = selectedSlots.map(s => ({ 
+          date: selectedDate, 
+          startTime: s.startTime, 
+          endTime: s.endTime, 
+          paymentMethod, 
+          courtType: s.courtType || courtType,
+          courtSide: s.courtSide || ((s.courtType || courtType) === 'half' ? courtSide : undefined)
+        }));
         await api.createBooking({ turfId: id, slots, teams: teamsPayload, courtType });
         showSuccessToast('Booking confirmed!');
         await loadSlots(selectedDate);
@@ -487,6 +515,50 @@ const TurfDetails = () => {
 										className="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
 									/>
 								</div>
+								
+								{/* Court Type Selection */}
+								<div className="flex items-center gap-4 mb-4">
+									<label className="text-sm font-medium text-gray-700 dark:text-gray-300">Court Type</label>
+									<select
+										value={courtType}
+										onChange={(e) => setCourtType(e.target.value)}
+										className="px-4 py-2 rounded-lg text-sm border bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+									>
+										<option value="full">Full Court</option>
+										<option value="half">Half Court</option>
+									</select>
+								</div>
+
+								{/* Court Side Selection for Half Court */}
+								{courtType === 'half' && (
+									<div className="flex items-center gap-4 mb-4">
+										<label className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Side</label>
+										<div className="flex gap-2">
+											<button
+												type="button"
+												onClick={() => setCourtSide('left')}
+												className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
+													courtSide === 'left'
+														? 'bg-blue-600 text-white border-blue-600'
+														: 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800'
+												}`}
+											>
+												Left Side
+											</button>
+											<button
+												type="button"
+												onClick={() => setCourtSide('right')}
+												className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 ${
+													courtSide === 'right'
+														? 'bg-blue-600 text-white border-blue-600'
+														: 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-800'
+												}`}
+											>
+												Right Side
+											</button>
+										</div>
+									</div>
+								)}
 								<div className="text-sm text-gray-700 dark:text-gray-300 flex items-center mb-4">
 									<ClockIcon className="w-4 h-4 mr-1" /> 
 									Slot duration: {turf.slotDuration || 60} mins
@@ -510,28 +582,64 @@ const TurfDetails = () => {
 												const end = slot.endTime || slot.end || slot.end_time;
 												const isAvailable = slot.isAvailable ?? slot.available ?? true;
 												const isSelected = selectedSlots.some(s => s.startTime === start && s.endTime === end);
+												
+												// For half court, check specific side availability
+												let sideAvailable = true;
+												let sideStatus = '';
+												if (courtType === 'half' && slot.halfCourtAvailability) {
+													sideAvailable = slot.halfCourtAvailability[courtSide];
+													if (slot.halfCourtAvailability.left && slot.halfCourtAvailability.right) {
+														sideStatus = 'Both sides available';
+													} else if (slot.halfCourtAvailability.left) {
+														sideStatus = 'Left side available';
+													} else if (slot.halfCourtAvailability.right) {
+														sideStatus = 'Right side available';
+													} else {
+														sideStatus = 'Fully booked';
+													}
+												}
+												
+												const canBook = isAvailable && (courtType === 'full' ? true : sideAvailable);
+												
 												return (
 													<button
 														key={idx}
-														disabled={!isAvailable}
+														disabled={!canBook}
 														onClick={() => {
-															if (!isAvailable) return;
+															if (!canBook) return;
 															setSelectedSlots(prev => {
 																const exists = prev.some(s => s.startTime === start && s.endTime === end);
-																return exists ? prev.filter(s => !(s.startTime === start && s.endTime === end)) : [...prev, { startTime: start, endTime: end }];
+																if (exists) {
+																	return prev.filter(s => !(s.startTime === start && s.endTime === end));
+																} else {
+																	// Always use current state values for courtType and courtSide
+																	return [...prev, { 
+																		startTime: start, 
+																		endTime: end, 
+																		courtType: courtType, 
+																		courtSide: courtType === 'half' ? courtSide : undefined 
+																	}];
+																}
 															});
 														}}
 														aria-pressed={isSelected}
 														className={`px-4 py-3 rounded-lg text-sm font-medium border transition-all duration-200 ${
-															!isAvailable
+															!canBook
 																? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700 cursor-not-allowed line-through'
 																: isSelected
 																	? 'bg-green-600 text-white border-green-600 shadow-lg transform scale-105'
 																	: 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 hover:bg-green-50 dark:hover:bg-gray-800 hover:border-green-300 dark:hover:border-green-600'
 														}`}
 													>
-														{start} - {end}
-														{isSelected && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-white/20 border border-white/30">Selected</span>}
+														<div className="text-center">
+															<div>{start} - {end}</div>
+															{courtType === 'half' && sideStatus && (
+																<div className="text-xs mt-1 opacity-75">
+																	{sideStatus}
+																</div>
+															)}
+															{isSelected && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-white/20 border border-white/30">Selected</span>}
+														</div>
 													</button>
 												);
 											})

@@ -214,9 +214,9 @@ class TurfService {
   }
 
   // Get available slots for a turf on a specific date
-  async getAvailableSlots(turfId, date) {
+  async getAvailableSlots(turfId, date, courtType = 'full') {
     try {
-      const response = await api.request(`/turfs/${turfId}/slots/available?date=${date}`);
+      const response = await api.request(`/turfs/${turfId}/slots/available?date=${date}&courtType=${courtType}`);
       return response;
     } catch (error) {
       throw this.handleError(error);
