@@ -100,8 +100,17 @@ const Home = () => {
           results[0], results[1], results[2], results[3], results[4], results[5]
         ];
         const liveData = liveRes?.data || liveRes || [];
-        const upcomingData = upcomingRes?.data || upcomingRes || [];
+        let upcomingData = upcomingRes?.data || upcomingRes || [];
         setLiveMatches(Array.isArray(liveData) ? liveData : []);
+        // Fallback: if no upcoming today, fetch upcoming without day constraint (future days)
+        if (!Array.isArray(upcomingData) || upcomingData.length === 0) {
+          try {
+            const upcomingAllRes = await matchService.getMatches({ window: 'upcoming', isPublic: true, limit: 6 });
+            upcomingData = upcomingAllRes?.data || upcomingAllRes || [];
+          } catch (_) {
+            // ignore fallback errors, keep empty
+          }
+        }
         setUpcomingMatches(Array.isArray(upcomingData) ? upcomingData : []);
         const completedData = completedRes?.data || completedRes || [];
         const now = new Date();
@@ -126,7 +135,14 @@ const Home = () => {
           setMyLiveMatches(Array.isArray(mineLive) ? mineLive : []);
         } else setMyLiveMatches([]);
         if (myUpcomingRes) {
-          const mineUpcoming = myUpcomingRes?.data || myUpcomingRes || [];
+          let mineUpcoming = myUpcomingRes?.data || myUpcomingRes || [];
+          // Fallback for personal upcoming: widen window if today is empty
+          if (!Array.isArray(mineUpcoming) || mineUpcoming.length === 0) {
+            try {
+              const myUpcomingAllRes = await matchService.getMatches({ window: 'upcoming', customerId: (user?._id || user?.id), limit: 50 });
+              mineUpcoming = myUpcomingAllRes?.data || myUpcomingAllRes || [];
+            } catch (_) {}
+          }
           setMyUpcomingMatches(Array.isArray(mineUpcoming) ? mineUpcoming : []);
         } else setMyUpcomingMatches([]);
         if (myCompletedRes) {

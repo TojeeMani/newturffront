@@ -16,13 +16,22 @@ const MyMatches = () => {
     if (!isAuthenticated || !user) return;
     try {
       setLoading(true);
-      const [liveRes, upRes, compRes] = await Promise.all([
+      const [liveRes, upResToday, compRes] = await Promise.all([
         matchService.getMatches({ window: 'live', customerId: user._id || user.id }),
         matchService.getMatches({ window: 'upcoming', day: 'today', customerId: user._id || user.id }),
         matchService.getMatches({ status: 'completed', customerId: user._id || user.id, limit: 50 })
       ]);
       const ld = liveRes?.data || liveRes || [];
-      const ud = upRes?.data || upRes || [];
+      let ud = upResToday?.data || upResToday || [];
+      // Fallback: if no upcoming today, fetch upcoming in future (no day constraint)
+      if (!Array.isArray(ud) || ud.length === 0) {
+        try {
+          const upResAll = await matchService.getMatches({ window: 'upcoming', customerId: user._id || user.id, limit: 50 });
+          ud = upResAll?.data || upResAll || [];
+        } catch (_) {
+          // ignore fallback errors, keep empty
+        }
+      }
       const cd = compRes?.data || compRes || [];
       setLive(Array.isArray(ld) ? ld : []);
       setUpcoming(Array.isArray(ud) ? ud : []);

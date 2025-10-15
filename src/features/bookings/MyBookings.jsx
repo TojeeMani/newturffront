@@ -84,6 +84,16 @@ const MyBookings = () => {
     return booking.status === 'completed' && booking.turfId?._id && !booking.hasReview;
   };
 
+  const getUserRating = (booking) => {
+    const r = booking?.reviews && booking.reviews.length > 0 ? booking.reviews[0]?.rating : null;
+    return typeof r === 'number' ? r : (r ? parseInt(r, 10) : null);
+  };
+
+  const getUserComment = (booking) => {
+    const c = booking?.reviews && booking.reviews.length > 0 ? booking.reviews[0]?.comment : '';
+    return (typeof c === 'string' ? c.trim() : '') || '';
+  };
+
   if (loading) {
     return (
       <div className="min-h-[40vh] flex items-center justify-center text-gray-500">
@@ -125,7 +135,7 @@ const MyBookings = () => {
                   <div className="text-lg font-bold">₹{b.totalAmount}</div>
                   <div className="text-xs text-gray-500">{b.pricePerHour}/hr</div>
                 </div>
-                {canRate(b) && (
+                {canRate(b) ? (
                   <button
                     onClick={(e) => { e.stopPropagation(); openRatingModal(b); }}
                     className="px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1"
@@ -133,6 +143,30 @@ const MyBookings = () => {
                     <StarIcon className="w-4 h-4" />
                     Rate
                   </button>
+                ) : (
+                  (() => {
+                    const ratingVal = getUserRating(b);
+                    const commentVal = getUserComment(b);
+                    return ratingVal ? (
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-center gap-1">
+                          {[1,2,3,4,5].map((i) => (
+                            i <= ratingVal ? (
+                              <StarIconSolid key={i} className="w-4 h-4 text-yellow-500" />
+                            ) : (
+                              <StarIcon key={i} className="w-4 h-4 text-gray-300" />
+                            )
+                          ))}
+                          <span className="text-sm font-medium text-gray-700 ml-1">{ratingVal}/5</span>
+                        </div>
+                        {commentVal && (
+                          <div className="mt-1 text-xs text-gray-500 max-w-[240px] truncate" title={commentVal}>
+                            {commentVal}
+                          </div>
+                        )}
+                      </div>
+                    ) : null;
+                  })()
                 )}
               </div>
             </div>

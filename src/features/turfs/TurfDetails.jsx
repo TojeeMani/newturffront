@@ -8,7 +8,6 @@ import PaymentModal from '../../components/modals/PaymentModal';
 import { showErrorToast, showSuccessToast } from '../../utils/toast';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
-import { BookingConfirmModal } from '../../components/modals';
 
 const TurfDetails = () => {
 	const { id } = useParams();
@@ -23,7 +22,6 @@ const TurfDetails = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlots, setSelectedSlots] = useState([]);
   const { isAuthenticated } = useAuth();
-  const [showConfirm, setShowConfirm] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('online');
   const [courtType, setCourtType] = useState('full');
   const [showPayment, setShowPayment] = useState(false);
@@ -158,7 +156,6 @@ const TurfDetails = () => {
           showSuccessToast('Booking confirmed!');
           await loadSlots(selectedDate);
           setSelectedSlots([]);
-          setShowConfirm(false);
         }
       } else {
         if (paymentMethod === 'online') {
@@ -170,7 +167,6 @@ const TurfDetails = () => {
         showSuccessToast('Booking confirmed!');
         await loadSlots(selectedDate);
         setSelectedSlots([]);
-        setShowConfirm(false);
       }
     } catch (e) {
       showErrorToast(e.message || 'Failed to complete booking');
@@ -224,6 +220,182 @@ const TurfDetails = () => {
           {/* Thumbnails replaced by carousel indicators */}
 				</div>
 
+				{/* Customer Reviews & Ratings - Moved below images */}
+				<div className="lg:col-span-3 mb-6">
+					<div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+						<div className="bg-gradient-to-r from-yellow-500 to-orange-500 px-6 py-4">
+							<div className="flex items-center justify-between">
+								<h2 className="text-xl font-bold text-white flex items-center">
+									<StarIconSolid className="w-6 h-6 mr-2" />
+									Customer Reviews & Ratings
+								</h2>
+								<div className="flex items-center text-white">
+									<div className="flex items-center mr-2">
+										{[...Array(5)].map((_, i) => (
+											<StarIconSolid key={i} className={`w-5 h-5 ${i < Math.floor(turf.rating || 0) ? 'text-yellow-300' : 'text-white/50'}`} />
+										))}
+									</div>
+									<span className="text-lg font-semibold">{turf.rating || 'New'}</span>
+								</div>
+							</div>
+						</div>
+						<div className="p-6">
+
+					{reviewsLoading && (
+						<div className="text-sm text-gray-500 flex items-center justify-center py-8">
+							<ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" /> Loading reviews...
+						</div>
+					)}
+
+					{reviewsError && (
+						<div className="text-sm text-red-600 mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+							{reviewsError}
+						</div>
+					)}
+
+					{!reviewsLoading && !reviewsError && (
+						<>
+							{/* Overall Rating Summary */}
+							{reviews.length > 0 && (
+								<div className="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+									<div className="flex items-center justify-between">
+										<div className="flex items-center">
+											<div className="text-4xl font-bold text-gray-900 dark:text-gray-100 mr-4">
+												{turf.rating ? turf.rating.toFixed(1) : 'New'}
+											</div>
+											<div>
+												<div className="flex items-center mb-1">
+													{[...Array(5)].map((_, i) => (
+														<StarIconSolid key={i} className={`w-5 h-5 ${i < Math.floor(turf.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`} />
+													))}
+												</div>
+												<div className="text-sm text-gray-600 dark:text-gray-400">
+													Based on {turf.totalReviews || 0} reviews
+												</div>
+											</div>
+										</div>
+										
+										{/* Rating Distribution */}
+										<div className="flex-1 max-w-xs ml-8">
+											{[5, 4, 3, 2, 1].map(rating => {
+												const count = reviews.filter(r => r.rating === rating).length;
+												const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+												return (
+													<div key={rating} className="flex items-center mb-1">
+														<span className="text-sm w-3 text-gray-600 dark:text-gray-400">{rating}</span>
+														<StarIconSolid className="w-3 h-3 text-yellow-400 mx-1" />
+														<div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mx-2">
+															<div 
+																className="bg-green-500 h-2 rounded-full transition-all duration-300"
+																style={{ width: `${percentage}%` }}
+															></div>
+														</div>
+														<span className="text-xs text-gray-500 dark:text-gray-400 w-8">{count}</span>
+													</div>
+												);
+											})}
+										</div>
+									</div>
+								</div>
+							)}
+
+							{/* Individual Reviews */}
+							<div className="space-y-4">
+								{reviews.length > 0 ? (
+									reviews.map((review, idx) => (
+										<div key={idx} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0">
+											<div className="flex items-start space-x-4">
+												{/* User Avatar */}
+												<div className="flex-shrink-0">
+													<div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+														{(review.userId?.name || 'A').charAt(0).toUpperCase()}
+													</div>
+												</div>
+												
+												{/* Review Content */}
+												<div className="flex-1 min-w-0">
+													<div className="flex items-center justify-between mb-2">
+														<div>
+															<h4 className="font-medium text-gray-900 dark:text-gray-100">
+																{review.userId?.name || 'Anonymous User'}
+															</h4>
+															<div className="flex items-center mt-1">
+																<div className="flex items-center mr-3">
+																	{[...Array(5)].map((_, i) => (
+																		<StarIconSolid key={i} className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`} />
+																	))}
+																</div>
+																<span className="text-sm text-gray-600 dark:text-gray-400">
+																	{review.bookingId?.bookingDate ? new Date(review.bookingId.bookingDate).toLocaleDateString('en-IN', {
+																		day: 'numeric',
+																		month: 'short',
+																		year: 'numeric'
+																	}) : new Date(review.createdAt).toLocaleDateString('en-IN', {
+																		day: 'numeric',
+																		month: 'short',
+																		year: 'numeric'
+																	})}
+																</span>
+															</div>
+														</div>
+														
+														{/* Verified Badge */}
+														<div className="flex items-center">
+															<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+																<svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+																	<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+																</svg>
+																Verified Booking
+															</span>
+														</div>
+													</div>
+													
+													{/* Review Text */}
+													{review.comment && (
+														<div className="mt-3">
+															<p className="text-gray-700 dark:text-gray-200 text-sm leading-relaxed">
+																{review.comment}
+															</p>
+														</div>
+													)}
+													
+													{/* Helpful Actions */}
+													<div className="flex items-center mt-4 space-x-4">
+														<button className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+															<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L9 6v4m-2 4h2m0 0h2m-2 0v2m0-2v-2" />
+															</svg>
+															Helpful
+														</button>
+														<button className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+															<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+															</svg>
+															Report
+														</button>
+													</div>
+												</div>
+											</div>
+										</div>
+									))
+								) : (
+									<div className="text-center py-12">
+										<div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+											<StarIconSolid className="w-8 h-8 text-gray-400" />
+										</div>
+										<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No reviews yet</h3>
+										<p className="text-gray-500 dark:text-gray-400 mb-4">
+											Be the first to review this turf and help others make informed decisions!
+										</p>
+									</div>
+								)}
+							</div>
+						</>
+					)}
+						</div>
+					</div>
+				</div>
+
           {canReview && (
             <div className="mb-4 p-3 border rounded-lg bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold mb-2">Rate and review</h2>
@@ -263,22 +435,185 @@ const TurfDetails = () => {
 						<MapPinIcon className="w-5 h-5 mr-1" />
 						<span>{turf.location?.address || 'Location not specified'}</span>
 					</div>
-					<div className="flex items-center justify-between mb-4">
+
+					{/* Rating and Price - Moved to top */}
+					<div className="flex items-center justify-between mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-xl">
 						<div className="flex items-center">
 							{[...Array(5)].map((_, i) => (
-								<StarIconSolid key={i} className={`w-5 h-5 ${i < Math.floor(turf.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`} />
+								<StarIconSolid key={i} className={`w-6 h-6 ${i < Math.floor(turf.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`} />
 							))}
-							<span className="ml-2 text-sm text-gray-600 dark:text-gray-300">{turf.rating || 'New'}{turf.totalReviews > 0 && ` (${turf.totalReviews})`}</span>
+							<span className="ml-3 text-lg font-semibold text-gray-900 dark:text-white">
+								{turf.rating || 'New'}{turf.totalReviews > 0 && ` (${turf.totalReviews})`}
+							</span>
 						</div>
-						<div className="text-2xl font-bold text-primary-600">₹{turf.pricePerHour}/hr</div>
+						<div className="text-3xl font-bold text-green-600 dark:text-green-400">₹{turf.pricePerHour}/hr</div>
 					</div>
 
+					{/* About this turf - Moved below rating */}
 					{turf.description && (
-						<div className="mb-4">
-							<h2 className="text-lg font-semibold mb-1">About this turf</h2>
-							<p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{turf.description}</p>
+						<div className="mb-6">
+							<div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+								<div className="bg-gradient-to-r from-gray-600 to-gray-700 px-6 py-4">
+									<h2 className="text-xl font-bold text-white flex items-center">
+										<MapPinIcon className="w-6 h-6 mr-2" />
+										About this Turf
+									</h2>
+								</div>
+								<div className="p-6">
+									<p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">{turf.description}</p>
+								</div>
+							</div>
 						</div>
 					)}
+
+					{/* Availability Section - Moved to top */}
+					<div className="mb-6">
+						<div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+							<div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4">
+								<h2 className="text-xl font-bold text-white flex items-center">
+									<ClockIcon className="w-6 h-6 mr-2" />
+									Book Your Slot
+								</h2>
+							</div>
+							<div className="p-6">
+								<div className="flex items-center gap-3 mb-4">
+									<label className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Date</label>
+									<input
+										type="date"
+										value={selectedDate}
+										onChange={(e) => setSelectedDate(e.target.value)}
+										min={todayStr}
+										max={maxDateStr}
+										className="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+									/>
+								</div>
+								<div className="text-sm text-gray-700 dark:text-gray-300 flex items-center mb-4">
+									<ClockIcon className="w-4 h-4 mr-1" /> 
+									Slot duration: {turf.slotDuration || 60} mins
+								</div>
+								
+								{slotsLoading && (
+									<div className="text-sm text-gray-500 flex items-center justify-center py-4">
+										<ArrowPathIcon className="w-4 h-4 mr-2 animate-spin" /> Loading slots...
+									</div>
+								)}
+								{slotsError && (
+									<div className="text-sm text-red-600 mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+										{slotsError}
+									</div>
+								)}
+								{!slotsLoading && !slotsError && (
+									<div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+										{Array.isArray(availableSlots) && availableSlots.length > 0 ? (
+											availableSlots.map((slot, idx) => {
+												const start = slot.startTime || slot.start || slot.start_time;
+												const end = slot.endTime || slot.end || slot.end_time;
+												const isAvailable = slot.isAvailable ?? slot.available ?? true;
+												const isSelected = selectedSlots.some(s => s.startTime === start && s.endTime === end);
+												return (
+													<button
+														key={idx}
+														disabled={!isAvailable}
+														onClick={() => {
+															if (!isAvailable) return;
+															setSelectedSlots(prev => {
+																const exists = prev.some(s => s.startTime === start && s.endTime === end);
+																return exists ? prev.filter(s => !(s.startTime === start && s.endTime === end)) : [...prev, { startTime: start, endTime: end }];
+															});
+														}}
+														aria-pressed={isSelected}
+														className={`px-4 py-3 rounded-lg text-sm font-medium border transition-all duration-200 ${
+															!isAvailable
+																? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700 cursor-not-allowed line-through'
+																: isSelected
+																	? 'bg-green-600 text-white border-green-600 shadow-lg transform scale-105'
+																	: 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 hover:bg-green-50 dark:hover:bg-gray-800 hover:border-green-300 dark:hover:border-green-600'
+														}`}
+													>
+														{start} - {end}
+														{isSelected && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-white/20 border border-white/30">Selected</span>}
+													</button>
+												);
+											})
+										) : (
+											<div className="text-sm text-gray-500 col-span-full text-center py-4">No slots available for this date.</div>
+										)}
+									</div>
+								)}
+
+								{selectedSlots.length > 0 && (
+									<div className="mb-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700">
+										<h3 className="text-sm font-semibold mb-3">Team Details (Optional)</h3>
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+											<div>
+												<label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Team A Name</label>
+												<input value={teamA.name} onChange={e=>setTeamA(prev=>({...prev, name:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="Team A" />
+												<label className="block text-xs text-gray-600 dark:text-gray-300 mt-2 mb-1">Team A Players (comma‑separated)</label>
+												<input value={teamA.players} onChange={e=>setTeamA(prev=>({...prev, players:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="e.g. John, Mike, Ali" />
+											</div>
+											<div>
+												<label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Team B Name</label>
+												<input value={teamB.name} onChange={e=>setTeamB(prev=>({...prev, name:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="Team B" />
+												<label className="block text-xs text-gray-600 dark:text-gray-300 mt-2 mb-1">Team B Players (comma‑separated)</label>
+												<input value={teamB.players} onChange={e=>setTeamB(prev=>({...prev, players:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="e.g. Sam, Raj, Omar" />
+											</div>
+										</div>
+									</div>
+								)}
+
+								{!isAuthenticated && (
+									<div className="text-sm text-gray-600 dark:text-gray-300 mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+										Login is required to book a slot.
+									</div>
+								)}
+
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+									<div>
+										<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Court Type</label>
+										<select value={courtType} onChange={(e) => setCourtType(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
+											<option value="full">Full Court</option>
+											<option value="half">Half Court</option>
+										</select>
+									</div>
+									<div>
+										<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment Method</label>
+										<select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
+											<option value="online">Online</option>
+											<option value="upi">UPI</option>
+											<option value="card">Card</option>
+											<option value="cash">Cash</option>
+											<option value="bank_transfer">Bank Transfer</option>
+										</select>
+									</div>
+								</div>
+
+								<button
+									disabled={!selectedSlots.length}
+									onClick={() => {
+										const bookingData = {
+											 turf,
+											 selectedDate,
+											 selectedSlots,
+											 teamA,
+											 teamB,
+											 paymentMethod,
+											 courtType,
+										};
+										navigate('/bookings/preview', { state: { bookingData } });
+									}}
+									className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-all duration-200 ${
+										!selectedSlots.length 
+											? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+											: 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+									}`}
+								>
+									Review & Confirm ({selectedSlots.length})
+								</button>
+							</div>
+						</div>
+					</div>
+
+
 
 					{Array.isArray(turf.amenities) && turf.amenities.length > 0 && (
 						<div className="mb-4">
@@ -291,295 +626,12 @@ const TurfDetails = () => {
 						</div>
 					)}
 
-					{/* User Reviews Section - Flipkart Style */}
-					<div className="mb-6">
-						<div className="flex items-center justify-between mb-4">
-							<h2 className="text-xl font-semibold">Ratings & Reviews</h2>
-							<div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-								<span>{reviews.length} Reviews</span>
-							</div>
-						</div>
 
-						{reviewsLoading && (
-							<div className="text-sm text-gray-500 flex items-center justify-center py-8">
-								<ArrowPathIcon className="w-5 h-5 mr-2 animate-spin" /> Loading reviews...
-							</div>
-						)}
 
-						{reviewsError && (
-							<div className="text-sm text-red-600 mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-								{reviewsError}
-							</div>
-						)}
-
-						{!reviewsLoading && !reviewsError && (
-							<>
-								{/* Overall Rating Summary */}
-								{reviews.length > 0 && (
-									<div className="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
-										<div className="flex items-center justify-between">
-											<div className="flex items-center">
-												<div className="text-4xl font-bold text-gray-900 dark:text-gray-100 mr-4">
-													{turf.rating ? turf.rating.toFixed(1) : 'New'}
-												</div>
-												<div>
-													<div className="flex items-center mb-1">
-														{[...Array(5)].map((_, i) => (
-															<StarIconSolid key={i} className={`w-5 h-5 ${i < Math.floor(turf.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`} />
-														))}
-													</div>
-													<div className="text-sm text-gray-600 dark:text-gray-400">
-														{turf.totalReviews || reviews.length} ratings & {reviews.length} reviews
-													</div>
-												</div>
-											</div>
-											
-											{/* Rating Distribution */}
-											<div className="flex-1 max-w-xs ml-8">
-												{[5, 4, 3, 2, 1].map(rating => {
-													const count = reviews.filter(r => r.rating === rating).length;
-													const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
-													return (
-														<div key={rating} className="flex items-center mb-1">
-															<span className="text-sm w-3 text-gray-600 dark:text-gray-400">{rating}</span>
-															<StarIconSolid className="w-3 h-3 text-yellow-400 mx-1" />
-															<div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mx-2">
-																<div 
-																	className="bg-green-500 h-2 rounded-full transition-all duration-300"
-																	style={{ width: `${percentage}%` }}
-																></div>
-															</div>
-															<span className="text-xs text-gray-500 dark:text-gray-400 w-8">{count}</span>
-														</div>
-													);
-												})}
-											</div>
-										</div>
-									</div>
-								)}
-
-								{/* Individual Reviews */}
-								<div className="space-y-4">
-									{reviews.length > 0 ? (
-										reviews.map((review, idx) => (
-											<div key={idx} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0">
-												<div className="flex items-start space-x-4">
-													{/* User Avatar */}
-													<div className="flex-shrink-0">
-														<div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-															{(review.userId?.name || 'A').charAt(0).toUpperCase()}
-														</div>
-													</div>
-													
-													{/* Review Content */}
-													<div className="flex-1 min-w-0">
-														<div className="flex items-center justify-between mb-2">
-															<div>
-																<h4 className="font-medium text-gray-900 dark:text-gray-100">
-																	{review.userId?.name || 'Anonymous User'}
-																</h4>
-																<div className="flex items-center mt-1">
-																	<div className="flex items-center mr-3">
-																		{[...Array(5)].map((_, i) => (
-																			<StarIconSolid key={i} className={`w-4 h-4 ${i < review.rating ? 'text-yellow-400' : 'text-gray-300'}`} />
-																		))}
-																	</div>
-																	<span className="text-sm text-gray-600 dark:text-gray-400">
-																		{review.bookingId?.bookingDate ? new Date(review.bookingId.bookingDate).toLocaleDateString('en-IN', {
-																			day: 'numeric',
-																			month: 'short',
-																			year: 'numeric'
-																		}) : new Date(review.createdAt).toLocaleDateString('en-IN', {
-																			day: 'numeric',
-																			month: 'short',
-																			year: 'numeric'
-																		})}
-																	</span>
-																</div>
-															</div>
-															
-															{/* Verified Badge */}
-															<div className="flex items-center">
-																<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-																	<svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-																		<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-																	</svg>
-																	Verified Booking
-																</span>
-															</div>
-														</div>
-														
-														{/* Review Text */}
-														{review.comment && (
-															<div className="mt-3">
-																<p className="text-gray-700 dark:text-gray-200 text-sm leading-relaxed">
-																	{review.comment}
-																</p>
-															</div>
-														)}
-														
-														{/* Helpful Actions */}
-														<div className="flex items-center mt-4 space-x-4">
-															<button className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
-																<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L9 6v4m-2 4h2m0 0h2m-2 0v2m0-2v-2" />
-																</svg>
-																Helpful
-															</button>
-															<button className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
-																<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-																</svg>
-																Report
-															</button>
-														</div>
-													</div>
-												</div>
-											</div>
-										))
-									) : (
-										<div className="text-center py-12">
-											<div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-												<StarIconSolid className="w-8 h-8 text-gray-400" />
-											</div>
-											<h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No reviews yet</h3>
-											<p className="text-gray-500 dark:text-gray-400 mb-4">
-												Be the first to review this turf and help others make informed decisions!
-											</p>
-										</div>
-									)}
-								</div>
-							</>
-						)}
-					</div>
-
-					<div className="mb-4">
-						<h2 className="text-lg font-semibold mb-2">Availability</h2>
-						<div className="flex items-center gap-3 mb-3">
-							<label className="text-sm text-gray-700 dark:text-gray-300">Date</label>
-							<input
-								type="date"
-								value={selectedDate}
-								onChange={(e) => setSelectedDate(e.target.value)}
-								min={todayStr}
-								max={maxDateStr}
-								className="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
-							/>
-						</div>
-						<div className="text-sm text-gray-700 dark:text-gray-300 flex items-center mb-2"><ClockIcon className="w-4 h-4 mr-1" /> Slot duration: {turf.slotDuration || 60} mins</div>
-						{slotsLoading && (
-							<div className="text-sm text-gray-500 flex items-center"><ArrowPathIcon className="w-4 h-4 mr-1 animate-spin" /> Loading slots...</div>
-						)}
-						{slotsError && (
-							<div className="text-sm text-red-600">{slotsError}</div>
-						)}
-						{!slotsLoading && !slotsError && (
-							<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-								{Array.isArray(availableSlots) && availableSlots.length > 0 ? (
-									availableSlots.map((slot, idx) => {
-										const start = slot.startTime || slot.start || slot.start_time;
-										const end = slot.endTime || slot.end || slot.end_time;
-										const isAvailable = slot.isAvailable ?? slot.available ?? true;
-										const isSelected = selectedSlots.some(s => s.startTime === start && s.endTime === end);
-										return (
-											<button
-												key={idx}
-												disabled={!isAvailable}
-												onClick={() => {
-													if (!isAvailable) return;
-													setSelectedSlots(prev => {
-														const exists = prev.some(s => s.startTime === start && s.endTime === end);
-														return exists ? prev.filter(s => !(s.startTime === start && s.endTime === end)) : [...prev, { startTime: start, endTime: end }];
-													});
-												}}
-												aria-pressed={isSelected}
-												className={`px-3 py-2 rounded-lg text-sm border transition-colors ${
-													!isAvailable
-														? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700 cursor-not-allowed line-through'
-														: isSelected
-															? 'bg-primary-600 text-white border-primary-600 shadow-inner'
-															: 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-800'
-												}`}
-											>
-												{start} - {end}
-												{isSelected && <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-white/20 border border-white/30">Selected</span>}
-											</button>
-										);
-									})
-								) : (
-									<div className="text-sm text-gray-500 col-span-full">No slots available for this date.</div>
-								)}
-							</div>
-						)}
-					</div>
-
-					<div className="mt-6">
-            {selectedSlots.length > 0 && (
-              <div className="mb-4 p-3 border rounded-lg bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-semibold mb-2">Teams (optional)</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Team A Name</label>
-                    <input value={teamA.name} onChange={e=>setTeamA(prev=>({...prev, name:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="Team A" />
-                    <label className="block text-xs text-gray-600 dark:text-gray-300 mt-2 mb-1">Team A Players (comma‑separated)</label>
-                    <input value={teamA.players} onChange={e=>setTeamA(prev=>({...prev, players:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="e.g. John, Mike, Ali" />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Team B Name</label>
-                    <input value={teamB.name} onChange={e=>setTeamB(prev=>({...prev, name:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="Team B" />
-                    <label className="block text-xs text-gray-600 dark:text-gray-300 mt-2 mb-1">Team B Players (comma‑separated)</label>
-                    <input value={teamB.players} onChange={e=>setTeamB(prev=>({...prev, players:e.target.value}))} className="w-full border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700" placeholder="e.g. Sam, Raj, Omar" />
-                  </div>
-                </div>
-              </div>
-            )}
-						{!isAuthenticated && (
-							<div className="text-sm text-gray-600 dark:text-gray-300 mb-2">Login is required to book a slot.</div>
-						)}
-            <div className="mb-3">
-              <label className="text-sm text-gray-700 dark:text-gray-300 mr-2">Court Type</label>
-              <select value={courtType} onChange={(e) => setCourtType(e.target.value)} className="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
-                <option value="full">Full Court</option>
-                <option value="half">Half Court</option>
-              </select>
-            </div>
-            <div className="mb-3">
-              <label className="text-sm text-gray-700 dark:text-gray-300 mr-2">Payment</label>
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="border rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700">
-                <option value="online">Online</option>
-                <option value="upi">UPI</option>
-                <option value="card">Card</option>
-                <option value="cash">Cash</option>
-                <option value="bank_transfer">Bank Transfer</option>
-              </select>
-            </div>
-						<button
-							disabled={!selectedSlots.length}
-							onClick={() => setShowConfirm(true)}
-							className={`btn-primary w-full ${!selectedSlots.length ? 'opacity-60 cursor-not-allowed' : ''}`}
-						>
-							Review & Confirm ({selectedSlots.length})
-						</button>
-					</div>
-
-          <BookingConfirmModal
-            open={showConfirm}
-            onClose={() => setShowConfirm(false)}
-            onConfirm={handleConfirmBooking}
-            turf={turf}
-            date={selectedDate}
-            startTime={selectedSlots[0]?.startTime}
-            endTime={selectedSlots[0]?.endTime}
-            pricePerHour={turf.pricePerHour}
-            durationMinutes={turf.slotDuration}
-            selectedSlots={selectedSlots}
-            courtType={courtType}
-            totalAmount={selectedSlots.length * turf.pricePerHour * ((turf.slotDuration || 60) / 60) * (courtType === 'half' ? 0.5 : 1)}
-          />
 
           <PaymentModal
             isOpen={showPayment}
-            onClose={() => { setShowPayment(false); setShowConfirm(false); }}
+            onClose={() => { setShowPayment(false); }}
             bookingDetails={paymentBooking}
             onPaymentSuccess={async () => {
               showSuccessToast('Payment successful! Booking confirmed.');
