@@ -23,7 +23,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 const AddTurf = ({ editTurfId, forceEdit = false }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { showGlobalLoading, hideGlobalLoading } = useLoading();
@@ -90,56 +90,60 @@ const AddTurf = ({ editTurfId, forceEdit = false }) => {
   };
 
   // Initialize form data with user registration data if available
-  const getInitialFormData = () => ({
-    name: user?.businessName || '',
-    location: user?.turfLocation ? {
-      address: user.turfLocation,
-      coordinates: null
-    } : {
-      address: '',
-      coordinates: null
-    },
-    pricePerHour: '',
-    images: [],
-    amenities: [],
-    sport: user?.sportType || '',
-    description: '',
-    availableSlots: {
-      monday: { isOpen: true, slots: [] },
-      tuesday: { isOpen: true, slots: [] },
-      wednesday: { isOpen: true, slots: [] },
-      thursday: { isOpen: true, slots: [] },
-      friday: { isOpen: true, slots: [] },
-      saturday: { isOpen: true, slots: [] },
-      sunday: { isOpen: true, slots: [] }
-    },
-    slotDuration: 60,
-    advanceBookingDays: 30
-  });
+  const getInitialFormData = () => {
+    // If still loading, return empty form data
+    if (authLoading) {
+      return {
+        name: '',
+        location: { address: '', coordinates: null },
+        pricePerHour: '',
+        images: [],
+        amenities: [],
+        sport: '',
+        description: '',
+        availableSlots: {
+          monday: { isOpen: true, slots: [] },
+          tuesday: { isOpen: true, slots: [] },
+          wednesday: { isOpen: true, slots: [] },
+          thursday: { isOpen: true, slots: [] },
+          friday: { isOpen: true, slots: [] },
+          saturday: { isOpen: true, slots: [] },
+          sunday: { isOpen: true, slots: [] }
+        },
+        slotDuration: 60,
+        advanceBookingDays: 30
+      };
+    }
+    
+    return {
+      name: user?.businessName || '',
+      location: user?.turfLocation ? {
+        address: user.turfLocation,
+        coordinates: null
+      } : {
+        address: '',
+        coordinates: null
+      },
+      pricePerHour: '',
+      images: [],
+      amenities: [],
+      sport: user?.sportType || '',
+      description: '',
+      availableSlots: {
+        monday: { isOpen: true, slots: [] },
+        tuesday: { isOpen: true, slots: [] },
+        wednesday: { isOpen: true, slots: [] },
+        thursday: { isOpen: true, slots: [] },
+        friday: { isOpen: true, slots: [] },
+        saturday: { isOpen: true, slots: [] },
+        sunday: { isOpen: true, slots: [] }
+      },
+      slotDuration: 60,
+      advanceBookingDays: 30
+    };
+  };
 
-  const [formData, setFormData] = useState({
-    name: '',
-    location: {
-      address: '',
-      coordinates: null
-    },
-    pricePerHour: '',
-    images: [],
-    amenities: [],
-    sport: '',
-    description: '',
-    availableSlots: {
-      monday: { isOpen: true, slots: [] },
-      tuesday: { isOpen: true, slots: [] },
-      wednesday: { isOpen: true, slots: [] },
-      thursday: { isOpen: true, slots: [] },
-      friday: { isOpen: true, slots: [] },
-      saturday: { isOpen: true, slots: [] },
-      sunday: { isOpen: true, slots: [] }
-    },
-    slotDuration: 60, // minutes
-    advanceBookingDays: 30
-  });
+  const [formData, setFormData] = useState(() => getInitialFormData());
 
   // Preload turf for edit: via props, navigation state, or query param ?edit=<turfId>
   useEffect(() => {
@@ -205,37 +209,25 @@ const AddTurf = ({ editTurfId, forceEdit = false }) => {
 
   // Update form data when user becomes available
   useEffect(() => {
-    console.log('🔧 AddTurf: User data available:', user);
-    console.log('🔧 AddTurf: Business name from user:', user?.businessName);
-    console.log('🔧 AddTurf: Turf location from user:', user?.turfLocation);
-    console.log('🔧 AddTurf: Sport type from user:', user?.sportType);
-    console.log('🔧 AddTurf: Full user object:', user);
-    
-    if (user && !isEditMode) {
-      console.log('🔧 AddTurf: Setting form data with user info');
-      setFormData(prev => {
-        const newFormData = {
-          ...prev,
-          name: user.businessName || '',
-          location: user.turfLocation ? {
-            address: user.turfLocation,
-            coordinates: null
-          } : {
-            address: '',
-            coordinates: null
-          },
-          sport: user.sportType || ''
-        };
-        console.log('🔧 AddTurf: New form data:', newFormData);
-        return newFormData;
-      });
+    if (user && !authLoading && !isEditMode) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.businessName || '',
+        location: user.turfLocation ? {
+          address: user.turfLocation,
+          coordinates: null
+        } : {
+          address: '',
+          coordinates: null
+        },
+        sport: user.sportType || ''
+      }));
     }
-  }, [user, isEditMode]);
+  }, [user, authLoading, isEditMode]);
 
   // Additional effect to handle user data loading after component mount
   useEffect(() => {
-    if (user && user.businessName && !isEditMode && !formData.name) {
-      console.log('🔧 AddTurf: User data loaded after mount, updating form');
+    if (user && user.businessName && !authLoading && !isEditMode && !formData.name) {
       setFormData(prev => ({
         ...prev,
         name: user.businessName,
@@ -249,7 +241,7 @@ const AddTurf = ({ editTurfId, forceEdit = false }) => {
         sport: user.sportType || ''
       }));
     }
-  }, [user, formData.name, isEditMode]);
+  }, [user, authLoading, formData.name, isEditMode]);
 
   // Form data debug removed for production
 
