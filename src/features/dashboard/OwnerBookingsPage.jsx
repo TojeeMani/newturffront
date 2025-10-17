@@ -351,14 +351,31 @@ const OwnerBookingsPage = () => {
   const verifyAndCheckIn = async (code) => {
     try {
       setScanError('');
+      console.log('🔍 Verifying booking code:', code);
+      
       const res = await api.post('/bookings/checkin', { bookingCode: String(code || '').trim() });
-      setSuccess('Booking verified and checked in');
-      setTimeout(() => setSuccess(''), 1500);
-      setShowScanner(false);
-      setScannedCode(String(code || ''));
-      await loadBookings();
+      
+      if (res.data && res.data.success) {
+        console.log('✅ Booking verified successfully:', res.data);
+        setSuccess(`Booking verified and checked in! Booking ID: ${res.data.data?._id || code}`);
+        setTimeout(() => setSuccess(''), 3000);
+        setShowScanner(false);
+        setScannedCode(String(code || ''));
+        await loadBookings();
+      } else {
+        throw new Error(res.data?.message || 'Verification failed');
+      }
     } catch (e) {
-      setScanError(e.message || 'Invalid code. Please try again.');
+      console.error('❌ Verification error:', e);
+      let errorMessage = 'Invalid code. Please try again.';
+      
+      if (e.response && e.response.data) {
+        errorMessage = e.response.data.message || errorMessage;
+      } else if (e.message) {
+        errorMessage = e.message;
+      }
+      
+      setScanError(errorMessage);
     }
   };
 
@@ -384,9 +401,36 @@ const OwnerBookingsPage = () => {
                   const detections = await detector.detect(videoRef.current);
                   if (detections && detections.length) {
                     const raw = detections[0].rawValue || '';
-                    const parsed = (() => { try { return JSON.parse(raw); } catch { return null; } })();
-                    const code = parsed?.bookingCode || raw;
-                    if (code) await verifyAndCheckIn(code);
+                    console.log('🔍 QR Code detected:', raw);
+                    
+                    let code = null;
+                    
+                    // Try to parse as JSON first
+                    try {
+                      const parsed = JSON.parse(raw);
+                      console.log('🔍 Parsed QR data:', parsed);
+                      
+                      // Check for bookingCode in various possible structures
+                      if (parsed.bookingCode) {
+                        code = parsed.bookingCode;
+                      } else if (parsed.bookingId) {
+                        // If only bookingId is available, we need to fetch the bookingCode
+                        // For now, we'll use the bookingId as fallback
+                        code = parsed.bookingId;
+                      }
+                    } catch (e) {
+                      // If not JSON, treat as plain text booking code
+                      console.log('🔍 QR data is not JSON, treating as plain text');
+                      code = raw.trim();
+                    }
+                    
+                    if (code) {
+                      console.log('🔍 Using booking code:', code);
+                      await verifyAndCheckIn(code);
+                    } else {
+                      console.log('❌ No valid booking code found in QR data');
+                      setScanError('Invalid QR code format. Please scan a valid booking QR code.');
+                    }
                   }
                 }
               } catch {}
@@ -551,17 +595,44 @@ const OwnerBookingsPage = () => {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold">Scan Customer QR</h3>
+              <h3 className="text-lg font-semibold">Scan Customer QR Code</h3>
               <button onClick={() => setShowScanner(false)} className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X className="h-5 w-5" /></button>
             </div>
-            <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 mb-3">
-              <video ref={videoRef} className="w-full h-64 bg-black object-cover" muted playsInline />
+            
+            <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                <strong>Instructions:</strong> Point the camera at the customer's booking QR code. The system will automatically detect and verify the booking.
+              </p>
             </div>
-            {scanError && <div className="mb-2 text-sm text-red-600">{scanError}</div>}
-            <div className="text-xs text-gray-500 mb-2">If camera scanning is not supported, enter the 4‑digit code:</div>
+            
+            <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 mb-3 relative">
+              <video ref={videoRef} className="w-full h-64 bg-black object-cover" muted playsInline />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-48 h-48 border-2 border-white rounded-lg opacity-50"></div>
+              </div>
+            </div>
+            
+            {scanError && (
+              <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{scanError}</p>
+              </div>
+            )}
+            
+            <div className="text-xs text-gray-500 mb-2">Manual entry (if camera scanning fails):</div>
             <div className="flex gap-2">
-              <input value={scannedCode} onChange={(e)=>{ setScannedCode(e.target.value); setScanError(''); }} placeholder="4‑digit code" maxLength={4} className="flex-1 px-3 py-2 border rounded" />
-              <button onClick={()=> verifyAndCheckIn(scannedCode)} className="px-3 py-2 bg-primary-600 text-white rounded">Verify</button>
+              <input 
+                value={scannedCode} 
+                onChange={(e)=>{ setScannedCode(e.target.value); setScanError(''); }} 
+                placeholder="Enter booking code or ID" 
+                className="flex-1 px-3 py-2 border rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent" 
+              />
+              <button 
+                onClick={()=> verifyAndCheckIn(scannedCode)} 
+                disabled={!scannedCode.trim()}
+                className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Verify
+              </button>
             </div>
           </div>
         </div>
