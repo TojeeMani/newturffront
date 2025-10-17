@@ -354,16 +354,17 @@ const OwnerBookingsPage = () => {
       console.log('🔍 Verifying booking code:', code);
       
       const res = await api.post('/bookings/checkin', { bookingCode: String(code || '').trim() });
+      console.log('🔍 API Response:', res);
       
-      if (res.data && res.data.success) {
-        console.log('✅ Booking verified successfully:', res.data);
-        setSuccess(`Booking verified and checked in! Booking ID: ${res.data.data?._id || code}`);
+      if (res && res.success) {
+        console.log('✅ Booking verified successfully:', res);
+        setSuccess(`Booking verified and checked in! Booking ID: ${res.data?._id || code}`);
         setTimeout(() => setSuccess(''), 3000);
         setShowScanner(false);
         setScannedCode(String(code || ''));
         await loadBookings();
       } else {
-        throw new Error(res.data?.message || 'Verification failed');
+        throw new Error(res?.message || 'Verification failed');
       }
     } catch (e) {
       console.error('❌ Verification error:', e);
