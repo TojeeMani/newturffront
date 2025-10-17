@@ -6,7 +6,8 @@ import './index.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoadingProvider } from './context/LoadingContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import { SessionWarning } from './components/common';
+import { FestivalProvider } from './context/FestivalContext';
+import { SessionWarning, FestivalNotification } from './components/common';
 import { Layout } from './components/layout';
 import { ProtectedRoute } from './components/common';
 import { FullPageLoader } from './components/ui/Loading';
@@ -131,14 +132,17 @@ const SessionWarningWrapper = () => {
 function App() {
   return (
     <ThemeProvider>
-      <LoadingProvider>
-        <AuthProvider>
-        <Router>
-          <div className="App min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-          {/* Session Warning */}
-          <SessionWarningWrapper />
-          {/* Theme-aware Toast Notifications */}
-          <ThemedToaster />
+      <FestivalProvider>
+        <LoadingProvider>
+          <AuthProvider>
+          <Router>
+            <div className="App min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+            {/* Session Warning */}
+            <SessionWarningWrapper />
+            {/* Festival Notification */}
+            <FestivalNotification />
+            {/* Theme-aware Toast Notifications */}
+            <ThemedToaster />
           <Suspense fallback={<SuspenseLoader />}>
             <Routes>
               <Route path="/" element={<Layout><Home /></Layout>} />
@@ -346,10 +350,11 @@ function App() {
               {/* Add more protected routes here as needed */}
             </Routes>
           </Suspense>
-        </div>
-      </Router>
-        </AuthProvider>
-      </LoadingProvider>
+            </div>
+          </Router>
+          </AuthProvider>
+        </LoadingProvider>
+      </FestivalProvider>
     </ThemeProvider>
   );
 }

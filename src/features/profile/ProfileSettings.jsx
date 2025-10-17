@@ -17,6 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { LocationInput } from '../../components/forms';
 import { ProfileImageUpload } from '../../components/ui';
+import { FestivalSettings } from '../../components/common';
 import toast from 'react-hot-toast';
 
 const ProfileSettings = () => {
@@ -45,12 +46,14 @@ const ProfileSettings = () => {
   const tabs = user?.userType === 'owner'
     ? [
         { id: 'personal', name: 'Personal Info', icon: UserIcon, description: 'Basic personal information' },
-        { id: 'preferences', name: 'Preferences', icon: Cog6ToothIcon, description: 'Account preferences' }
+        { id: 'preferences', name: 'Preferences', icon: Cog6ToothIcon, description: 'Account preferences' },
+        { id: 'festivals', name: 'Festival Themes', icon: HeartIcon, description: 'Festival theme settings' }
       ]
     : [
         { id: 'personal', name: 'Personal Info', icon: UserIcon, description: 'Basic personal information' },
         { id: 'sports', name: 'Sports & Skills', icon: HeartIcon, description: 'Sports preferences and skill level' },
-        { id: 'preferences', name: 'Preferences', icon: Cog6ToothIcon, description: 'Account preferences' }
+        { id: 'preferences', name: 'Preferences', icon: Cog6ToothIcon, description: 'Account preferences' },
+        { id: 'festivals', name: 'Festival Themes', icon: HeartIcon, description: 'Festival theme settings' }
       ];
 
   useEffect(() => {
@@ -481,6 +484,21 @@ const ProfileSettings = () => {
                             <p>Additional preferences and settings will be available here.</p>
                           </div>
                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'festivals' && (
+                    <div className="space-y-8">
+                      <div>
+                        <div className="flex items-center space-x-3 mb-6">
+                          <HeartIcon className="w-6 h-6 text-blue-600" />
+                          <div>
+                            <h2 className="text-xl font-semibold text-gray-900">Festival Themes</h2>
+                            <p className="text-sm text-gray-500">View and manage festival theme settings</p>
+                          </div>
+                        </div>
+                        <FestivalSettings />
                       </div>
                     </div>
                   )}

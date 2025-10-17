@@ -162,3 +162,244 @@ body.dark {
 .animate-leave {
   animation: leave 0.4s ease-in forwards;
 }
+
+/* Festival Theme Styles */
+.festival-diwali {
+  --festival-primary: #FF6B35;
+  --festival-secondary: #F7931E;
+  --festival-accent: #FFD700;
+  --festival-background: #FFF8DC;
+  --festival-text: #8B4513;
+  --festival-light: #FFE4B5;
+  --festival-dark: #B8860B;
+}
+
+.festival-christmas {
+  --festival-primary: #DC2626;
+  --festival-secondary: #16A34A;
+  --festival-accent: #F59E0B;
+  --festival-background: #FEF2F2;
+  --festival-text: #1F2937;
+  --festival-light: #FEE2E2;
+  --festival-dark: #991B1B;
+}
+
+.festival-holi {
+  --festival-primary: #EC4899;
+  --festival-secondary: #8B5CF6;
+  --festival-accent: #10B981;
+  --festival-background: #FDF2F8;
+  --festival-text: #581C87;
+  --festival-light: #FCE7F3;
+  --festival-dark: #BE185D;
+}
+
+.festival-eid {
+  --festival-primary: #059669;
+  --festival-secondary: #7C3AED;
+  --festival-accent: #F59E0B;
+  --festival-background: #F0FDF4;
+  --festival-text: #064E3B;
+  --festival-light: #D1FAE5;
+  --festival-dark: #047857;
+}
+
+/* Festival Animations */
+@keyframes diyaFloat {
+  0%, 100% { 
+    transform: translateY(0px) rotate(0deg);
+    box-shadow: 0 0 20px #FFD700;
+  }
+  25% { 
+    transform: translateY(-10px) rotate(5deg);
+    box-shadow: 0 0 25px #FFD700, 0 0 35px #FF6B35;
+  }
+  50% { 
+    transform: translateY(-5px) rotate(-3deg);
+    box-shadow: 0 0 30px #FFD700, 0 0 40px #FF6B35;
+  }
+  75% { 
+    transform: translateY(-15px) rotate(3deg);
+    box-shadow: 0 0 25px #FFD700, 0 0 35px #FF6B35;
+  }
+}
+
+@keyframes snowFall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes colorSplash {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.9;
+  }
+}
+
+@keyframes crescentFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(10deg);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* Festival-specific styles */
+.festival-diwali .bg-primary-600 {
+  background-color: var(--festival-primary) !important;
+}
+
+.festival-diwali .text-primary-600 {
+  color: var(--festival-primary) !important;
+}
+
+.festival-diwali .border-primary-600 {
+  border-color: var(--festival-primary) !important;
+}
+
+.festival-diwali .bg-white {
+  background-color: var(--festival-background) !important;
+}
+
+.festival-diwali .text-gray-900 {
+  color: var(--festival-text) !important;
+}
+
+.festival-diwali .card-hover:hover {
+  box-shadow: 0 20px 25px -5px rgba(255, 107, 53, 0.1), 0 10px 10px -5px rgba(255, 107, 53, 0.04);
+}
+
+.festival-christmas .bg-primary-600 {
+  background-color: var(--festival-primary) !important;
+}
+
+.festival-christmas .text-primary-600 {
+  color: var(--festival-primary) !important;
+}
+
+.festival-christmas .border-primary-600 {
+  border-color: var(--festival-primary) !important;
+}
+
+.festival-christmas .bg-white {
+  background-color: var(--festival-background) !important;
+}
+
+.festival-christmas .text-gray-900 {
+  color: var(--festival-text) !important;
+}
+
+.festival-christmas .card-hover:hover {
+  box-shadow: 0 20px 25px -5px rgba(220, 38, 38, 0.1), 0 10px 10px -5px rgba(220, 38, 38, 0.04);
+}
+
+.festival-holi .bg-primary-600 {
+  background-color: var(--festival-primary) !important;
+}
+
+.festival-holi .text-primary-600 {
+  color: var(--festival-primary) !important;
+}
+
+.festival-holi .border-primary-600 {
+  border-color: var(--festival-primary) !important;
+}
+
+.festival-holi .bg-white {
+  background-color: var(--festival-background) !important;
+}
+
+.festival-holi .text-gray-900 {
+  color: var(--festival-text) !important;
+}
+
+.festival-holi .card-hover:hover {
+  box-shadow: 0 20px 25px -5px rgba(236, 72, 153, 0.1), 0 10px 10px -5px rgba(236, 72, 153, 0.04);
+}
+
+.festival-eid .bg-primary-600 {
+  background-color: var(--festival-primary) !important;
+}
+
+.festival-eid .text-primary-600 {
+  color: var(--festival-primary) !important;
+}
+
+.festival-eid .border-primary-600 {
+  border-color: var(--festival-primary) !important;
+}
+
+.festival-eid .bg-white {
+  background-color: var(--festival-background) !important;
+}
+
+.festival-eid .text-gray-900 {
+  color: var(--festival-text) !important;
+}
+
+.festival-eid .card-hover:hover {
+  box-shadow: 0 20px 25px -5px rgba(5, 150, 105, 0.1), 0 10px 10px -5px rgba(5, 150, 105, 0.04);
+}
+
+/* Festival decoration classes */
+.festival-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.festival-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+.festival-twinkle {
+  animation: twinkle 1.5s ease-in-out infinite;
+}
+
+/* Festival gradient text */
+.festival-gradient-text {
+  background: linear-gradient(135deg, var(--festival-primary) 0%, var(--festival-secondary) 50%, var(--festival-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
