@@ -29,6 +29,8 @@ const Navigation = () => {
 
   const handleProfileComplete = (updatedUser) => {
     setShowProfileModal(false);
+    // Clear the session storage so modal can show again if needed
+    sessionStorage.removeItem('profileModalShown');
   };
 
   const handleLogout = async () => {
@@ -64,12 +66,18 @@ const Navigation = () => {
     }
   };
 
-  // Redirect to profile page if user needs to complete profile (except owners who stay on dashboard)
+  // Show profile completion modal instead of forcing redirect
+  // This allows users to navigate freely while still encouraging profile completion
   React.useEffect(() => {
-    if (needsProfileCompletion && isAuthenticated && user?.userType !== 'owner' && location.pathname !== '/profile' && location.pathname !== '/profile/settings') {
-      navigate('/profile');
+    if (needsProfileCompletion && isAuthenticated && user?.userType !== 'owner' && !showProfileModal) {
+      // Only show modal once per session, not on every route change
+      const hasShownProfileModal = sessionStorage.getItem('profileModalShown');
+      if (!hasShownProfileModal) {
+        setShowProfileModal(true);
+        sessionStorage.setItem('profileModalShown', 'true');
+      }
     }
-  }, [needsProfileCompletion, isAuthenticated, user?.userType, navigate, location.pathname]);
+  }, [needsProfileCompletion, isAuthenticated, user?.userType, showProfileModal]);
 
   return (
     <>

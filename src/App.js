@@ -6,8 +6,7 @@ import './index.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoadingProvider } from './context/LoadingContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import { FestivalProvider } from './context/FestivalContext';
-import { SessionWarning, FestivalNotification } from './components/common';
+import { SessionWarning } from './components/common';
 import { Layout } from './components/layout';
 import { ProtectedRoute } from './components/common';
 import { FullPageLoader } from './components/ui/Loading';
@@ -34,8 +33,6 @@ const EnhancedAddTurf = React.lazy(() => import('./features/turfs/EnhancedAddTur
 const TurfDetails = React.lazy(() => import('./features/turfs/TurfDetails'));
 const EditTurf = React.lazy(() => import('./features/turfs/EditTurf'));
 const MyBookings = React.lazy(() => import('./features/bookings/MyBookings'));
-const BookingDetails = React.lazy(() => import('./features/bookings/BookingDetails'));
-const BookingConfirmation = React.lazy(() => import('./pages/BookingConfirmation'));
 const MyMatches = React.lazy(() => import('./pages/MyMatches'));
 const PublicMatchViewer = React.lazy(() => import('./pages/PublicMatchViewer'));
 
@@ -132,17 +129,14 @@ const SessionWarningWrapper = () => {
 function App() {
   return (
     <ThemeProvider>
-      <FestivalProvider>
-        <LoadingProvider>
-          <AuthProvider>
-          <Router>
-            <div className="App min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-            {/* Session Warning */}
-            <SessionWarningWrapper />
-            {/* Festival Notification */}
-            <FestivalNotification />
-            {/* Theme-aware Toast Notifications */}
-            <ThemedToaster />
+      <LoadingProvider>
+        <AuthProvider>
+        <Router>
+          <div className="App min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+          {/* Session Warning */}
+          <SessionWarningWrapper />
+          {/* Theme-aware Toast Notifications */}
+          <ThemedToaster />
           <Suspense fallback={<SuspenseLoader />}>
             <Routes>
               <Route path="/" element={<Layout><Home /></Layout>} />
@@ -203,22 +197,6 @@ function App() {
                 element={
                   <ProtectedRoute requireAuth={true}>
                     <Layout><MyBookings /></Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/bookings/preview"
-                element={
-                  <ProtectedRoute requireAuth={true}>
-                    <Layout><BookingConfirmation /></Layout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/bookings/:id"
-                element={
-                  <ProtectedRoute requireAuth={true}>
-                    <Layout><BookingDetails /></Layout>
                   </ProtectedRoute>
                 }
               />
@@ -350,11 +328,10 @@ function App() {
               {/* Add more protected routes here as needed */}
             </Routes>
           </Suspense>
-            </div>
-          </Router>
-          </AuthProvider>
-        </LoadingProvider>
-      </FestivalProvider>
+        </div>
+      </Router>
+        </AuthProvider>
+      </LoadingProvider>
     </ThemeProvider>
   );
 }

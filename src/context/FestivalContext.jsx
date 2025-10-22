@@ -115,7 +115,7 @@ const FESTIVALS = [
   {
     id: 'diwali',
     name: 'Diwali',
-    actualDate: '2025-10-20', // Actual Diwali date 2025
+    actualDate: '2024-10-20', // Moved to past date to disable
     colors: {
       primary: '#FF6B35',    // Orange
       secondary: '#F7931E',  // Golden Orange

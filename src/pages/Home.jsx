@@ -421,7 +421,10 @@ const Home = () => {
 
           {featuredTurfs.length > 0 && (
             <div className="text-center">
-              <button className="btn-secondary">
+              <button 
+                className="btn-secondary"
+                onClick={() => navigate('/turfs')}
+              >
                 View All Turfs
                 <ArrowRightIcon className="w-5 h-5 ml-2" />
               </button>
@@ -519,7 +522,10 @@ const Home = () => {
           </div>
 
           <div className="text-center">
-            <button className="btn-secondary">
+            <button 
+              className="btn-secondary"
+              onClick={() => scrollToSection('matches')}
+            >
               View All Live Matches
               <ArrowRightIcon className="w-5 h-5 ml-2" />
             </button>
@@ -946,7 +952,10 @@ const Home = () => {
           </div>
 
           <div className="text-center">
-            <button className="btn-secondary">
+            <button 
+              className="btn-secondary"
+              onClick={() => scrollToSection('tournaments')}
+            >
               View All Tournaments
               <ArrowRightIcon className="w-5 h-5 ml-2" />
             </button>

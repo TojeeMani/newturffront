@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { ArrowPathIcon, StarIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
+import { isSlotTimeEnded, canRateBooking } from '../../utils/bookingUtils';
 
 const MyBookings = () => {
   const navigate = useNavigate();
@@ -14,6 +15,8 @@ const MyBookings = () => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
+  const [eligibilityMap, setEligibilityMap] = useState({});
+  const [reviewTurfId, setReviewTurfId] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -21,7 +24,33 @@ const MyBookings = () => {
       setError('');
       const res = await api.get('/bookings');
       const data = res?.data || res;
-      setBookings(Array.isArray(data) ? data : (data?.data || []));
+      const bookingsData = Array.isArray(data) ? data : (data?.data || []);
+      setBookings(bookingsData);
+      // Fetch server-side eligibility per booking
+      try {
+        const entries = await Promise.all(bookingsData.map(async (b) => {
+          try {
+            const r = await api.get(`/bookings/${b._id}/can-rate`);
+            const info = r?.data?.data || r?.data || {};
+            return [b._id, {
+              canReview: !!info?.canReview,
+              slotTimeHasEnded: !!info?.slotTimeHasEnded,
+              reason: info?.reason || '',
+              turfId: info?.turfId || (b?.turfId?._id || b?.turfId?.id || b?.turfId || null)
+            }];
+          } catch (err) {
+            return [b._id, {
+              canReview: canRateBooking(b),
+              slotTimeHasEnded: isSlotTimeEnded(b),
+              reason: err?.response?.data?.message || 'Eligibility check failed',
+              turfId: b?.turfId?._id || b?.turfId?.id || b?.turfId || null
+            }];
+          }
+        }));
+        setEligibilityMap(Object.fromEntries(entries));
+      } catch {
+        // ignore
+      }
     } catch (e) {
       setError(e.message || 'Failed to load bookings');
     } finally {
@@ -31,11 +60,52 @@ const MyBookings = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  const resolveTurfIdForBooking = useCallback(async (booking) => {
+    try {
+      // Try direct from booking
+      let tid = booking?.turfId?._id || booking?.turfId?.id || booking?.turfId;
+      if (!tid) {
+        // Try cached eligibility
+        const cached = eligibilityMap?.[booking?._id];
+        tid = cached?.turfId || tid;
+      }
+      if (!tid) {
+        // Try can-rate
+        try {
+          const r = await api.get(`/bookings/${booking._id}/can-rate`);
+          const info = r?.data?.data || r?.data || {};
+          tid = info?.turfId || tid;
+        } catch {}
+      }
+      if (!tid) {
+        // Try full booking fetch
+        try {
+          const r2 = await api.get(`/bookings/${booking._id}`);
+          const bd = r2?.data?.data || r2?.data || {};
+          tid = bd?.turfId?._id || bd?.turfId?.id || bd?.turfId || tid;
+        } catch {}
+      }
+      if (!tid) {
+        // Try review-status endpoint
+        try {
+          const r3 = await api.get(`/bookings/${booking._id}/review-status`);
+          const info3 = r3?.data?.data || r3?.data || {};
+          tid = info3?.turfId || tid;
+        } catch {}
+      }
+      setReviewTurfId(tid || null);
+    } catch {
+      setReviewTurfId(null);
+    }
+  }, [eligibilityMap]);
+
   const openRatingModal = (booking) => {
     setSelectedBooking(booking);
     setRating(0);
     setComment('');
     setShowRatingModal(true);
+    // Resolve turfId ahead of submission
+    resolveTurfIdForBooking(booking);
   };
 
   const closeRatingModal = () => {
@@ -43,6 +113,7 @@ const MyBookings = () => {
     setSelectedBooking(null);
     setRating(0);
     setComment('');
+    setReviewTurfId(null);
   };
 
   const submitRating = async () => {
@@ -50,13 +121,85 @@ const MyBookings = () => {
     
     try {
       setSubmittingRating(true);
-      console.log('📤 Submitting rating data:', {
-        bookingId: selectedBooking._id,
-        rating: rating,
-        comment: comment.trim() || undefined
-      });
       
-      await api.post(`/turfs/${selectedBooking.turfId._id}/reviews`, {
+      
+      // Resolve turfId with multiple fallbacks
+      let turfId = null;
+      
+      // Try 1: Direct from selectedBooking
+      turfId = selectedBooking?.turfId?._id || selectedBooking?.turfId?.id || selectedBooking?.turfId;
+      // Try 2: From pre-resolved reviewTurfId
+      if (!turfId) {
+        turfId = reviewTurfId;
+      }
+      
+      // Try 3: From cached eligibilityMap
+      if (!turfId) {
+        const cached = eligibilityMap?.[selectedBooking._id];
+        turfId = cached?.turfId;
+      }
+      
+      // Try 4: Fetch from can-rate endpoint
+      if (!turfId) {
+        try {
+          const r = await api.get(`/bookings/${selectedBooking._id}/can-rate`);
+          const info = r?.data?.data || r?.data || {};
+          turfId = info?.turfId;
+        } catch (e) {
+          console.warn('Failed to get turfId from can-rate endpoint:', e.message);
+        }
+      }
+      
+      // Try 5: Fetch full booking details
+      if (!turfId) {
+        try {
+          const r = await api.get(`/bookings/${selectedBooking._id}`);
+          const bd = r?.data?.data || r?.data || {};
+          turfId = bd?.turfId?._id || bd?.turfId?.id || bd?.turfId;
+        } catch (e) {
+          console.warn('Failed to get turfId from booking details:', e.message);
+        }
+      }
+      
+      // Try 6: Review status endpoint
+      if (!turfId) {
+        try {
+          const r = await api.get(`/bookings/${selectedBooking._id}/review-status`);
+          const info = r?.data?.data || r?.data || {};
+          turfId = info?.turfId;
+        } catch (e) {
+          console.warn('Failed to get turfId from review-status endpoint:', e.message);
+        }
+      }
+      
+      // Try 7: Find booking from current bookings list
+      if (!turfId) {
+        const currentBooking = bookings.find(b => b._id === selectedBooking._id);
+        if (currentBooking) {
+          turfId = currentBooking?.turfId?._id || currentBooking?.turfId?.id || currentBooking?.turfId;
+        }
+      }
+      
+      // Try 8: Use ownerId to find turf (if turfId is null but ownerId exists)
+      if (!turfId && selectedBooking?.ownerId) {
+        try {
+          // Try to get turfs by owner and find the one that matches this booking
+          const turfsResponse = await api.get(`/turfs?owner=${selectedBooking.ownerId._id || selectedBooking.ownerId}`);
+          const turfs = turfsResponse?.data?.data || turfsResponse?.data || [];
+          if (turfs.length > 0) {
+            // Use the first turf for this owner (in a real scenario, you might need more logic)
+            turfId = turfs[0]?._id || turfs[0]?.id;
+          }
+        } catch (e) {
+          console.warn('Failed to get turfs by owner:', e.message);
+        }
+      }
+      
+      if (!turfId) {
+        throw new Error('Unable to determine turf ID for this booking. Please try again.');
+      }
+      
+      await api.post(`/turfs/${turfId}/reviews`, {
         bookingId: selectedBooking._id,
         rating,
         comment: comment.trim() || undefined
@@ -66,11 +209,11 @@ const MyBookings = () => {
       await load();
       closeRatingModal();
     } catch (err) {
-      console.error('❌ Rating submission error:', err.response?.data || err.message);
-      const errorMessage = err.response?.data?.message || 'Failed to submit rating';
+      console.error('❌ Rating submission error:', err.response?.data || err.message || err);
+      const errorMessage = err.response?.data?.message || (typeof err.message === 'string' ? err.message : 'Failed to submit rating');
       
       // Handle specific error cases
-      if (errorMessage.includes('already reviewed')) {
+      if (errorMessage.toLowerCase().includes('already reviewed')) {
         setError('You have already reviewed this booking/turf. You can only review once per booking.');
       } else {
         setError(errorMessage);
@@ -81,7 +224,9 @@ const MyBookings = () => {
   };
 
   const canRate = (booking) => {
-    return booking.status === 'completed' && booking.turfId?._id && !booking.hasReview;
+    const server = eligibilityMap[booking._id];
+    if (server && typeof server.canReview === 'boolean') return server.canReview;
+    return canRateBooking(booking);
   };
 
   const getUserRating = (booking) => {
@@ -135,19 +280,19 @@ const MyBookings = () => {
                   <div className="text-lg font-bold">₹{b.totalAmount}</div>
                   <div className="text-xs text-gray-500">{b.pricePerHour}/hr</div>
                 </div>
-                {canRate(b) ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); openRatingModal(b); }}
-                    className="px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1"
-                  >
-                    <StarIcon className="w-4 h-4" />
-                    Rate
-                  </button>
-                ) : (
-                  (() => {
-                    const ratingVal = getUserRating(b);
-                    const commentVal = getUserComment(b);
-                    return ratingVal ? (
+                {(() => {
+                  const ratingVal = getUserRating(b);
+                  const commentVal = getUserComment(b);
+                  const hasReview = b?.reviews && b.reviews.length > 0;
+                  const slotTimeHasEnded = isSlotTimeEnded(b);
+                  const isCompleted = b.status === 'completed';
+                  const server = eligibilityMap[b._id] || {};
+                  const serverSlotEnded = server.slotTimeHasEnded;
+                  const serverReason = server.reason;
+                  
+                  // Show existing review if it exists
+                  if (hasReview && ratingVal) {
+                    return (
                       <div className="flex flex-col items-end">
                         <div className="flex items-center gap-1">
                           {[1,2,3,4,5].map((i) => (
@@ -165,9 +310,37 @@ const MyBookings = () => {
                           </div>
                         )}
                       </div>
-                    ) : null;
-                  })()
-                )}
+                    );
+                  }
+                  
+                  // Show rate button if can rate
+                  if (canRate(b)) {
+                    return (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openRatingModal(b); }}
+                        className="px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-1"
+                      >
+                        <StarIcon className="w-4 h-4" />
+                        Rate Now
+                      </button>
+                    );
+                  }
+                  
+                  // Show slot time not ended message
+                  if (isCompleted && ((serverSlotEnded === false) || (!slotTimeHasEnded && serverSlotEnded !== true))) {
+                    return (
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500 mb-1">Slot time not ended</div>
+                        <div className="text-xs text-gray-400">Rate after {b.endTime}</div>
+                        {serverReason && (
+                          <div className="text-xs text-gray-400 mt-1">{serverReason}</div>
+                        )}
+                      </div>
+                    );
+                  }
+                  
+                  return null;
+                })()}
               </div>
             </div>
           ))}
@@ -183,6 +356,11 @@ const MyBookings = () => {
               <p className="text-sm text-gray-600 mb-2">
                 How was your experience at <span className="font-medium">{selectedBooking.turfId?.name}</span>?
               </p>
+              <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-xs text-green-700">
+                  ✓ Your slot time has ended ({selectedBooking.endTime}) - you can now rate your experience
+                </p>
+              </div>
               <div className="flex items-center gap-1 mb-4">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button

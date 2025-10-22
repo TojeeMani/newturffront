@@ -16,8 +16,12 @@ class TurfService {
   // Reviews
   async getTurfReviews(turfId) {
     try {
-      return await api.request(`/turfs/${turfId}/reviews`);
+      console.log('🔍 TurfService: Fetching reviews for turf:', turfId);
+      const response = await api.request(`/turfs/${turfId}/reviews`);
+      console.log('🔍 TurfService: Reviews response:', response);
+      return response;
     } catch (error) {
+      console.error('❌ TurfService: Error fetching reviews:', error);
       throw this.handleError(error);
     }
   }

@@ -337,15 +337,6 @@ class ApiService {
     return data.secure_url;
   }
   
-  // Payment methods
-  async createPaymentOrder({ bookingId, amount }) {
-    return this.post('/payment/create-order', { bookingId, amount });
-  }
-
-  async verifyPayment(payload) {
-    return this.post('/payment/verify', payload);
-  }
-  
 }
 
 // Create and export a singleton instance

@@ -55,10 +55,14 @@ const TurfDetails = () => {
     try {
       setReviewsLoading(true);
       setReviewsError('');
+      console.log('🔍 Loading reviews for turf:', id);
       const res = await turfService.getTurfReviews(id);
+      console.log('🔍 Reviews API response:', res);
       const data = res?.data || res;
+      console.log('🔍 Reviews data:', data);
       setReviews(Array.isArray(data) ? data : []);
     } catch (err) {
+      console.error('❌ Error loading reviews:', err);
       setReviewsError(err.message || 'Failed to load reviews');
       setReviews([]);
     } finally {
@@ -327,9 +331,20 @@ const TurfDetails = () => {
 								</div>
 							)}
 
+
 							{/* Individual Reviews */}
 							<div className="space-y-4">
-								{reviews.length > 0 ? (
+								{reviewsLoading ? (
+									<div className="text-center py-8">
+										<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+										<p className="text-gray-500 dark:text-gray-400 mt-2">Loading reviews...</p>
+									</div>
+								) : reviewsError ? (
+									<div className="text-center py-8">
+										<div className="text-red-500 mb-2">⚠️</div>
+										<p className="text-red-500 dark:text-red-400">{reviewsError}</p>
+									</div>
+								) : reviews.length > 0 ? (
 									reviews.map((review, idx) => (
 										<div key={idx} className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0">
 											<div className="flex items-start space-x-4">
